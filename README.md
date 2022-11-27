@@ -2,11 +2,10 @@
 C# Client/SDK to interact with Uplay/Ubisoft API's
 
 # Folders
-Protobufs (Uplay-Protobufs) => Generating .dll and provide a Libary for All other Applications.\
-And good for Ubi-Parser (and others) and you can get it from Nuget(Soon)
+Protobufs (Uplay-Protobufs) => Generating .dll and provide a Libary for Applications.
 
-UplayKit => x
+UplayKit => Communicating with dmx.upc.ubisoft.com backend.
 
-DecryptPackets => As a name says It used to decrypt the Base64 string 
+DecryptPackets => Decrypting the Base64 string (decrypt.txt) or the binary data (data.bin).
 
-UbiServives => x
+UbiServives => Gathering Information from public-ubiservices.ubi, store.ubi, etc.
