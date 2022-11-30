@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SignAssembly>False</SignAssembly>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>Uplay Protobufs</Title>
+    <PackageId>Uplay-$(AssemblyName)</PackageId>
+    <Company>UplayDB</Company>
+    <Authors>UplayDB,SlejmUr</Authors>
+    <Product>Uplay-$(AssemblyName)</Product>
+    <Description>Uplay protobuf files in C#</Description>
+    <Copyright>Copyright © UplayDB Team 2022</Copyright>
+    <PackageProjectUrl>https://github.com/UplayDB/UplayKit</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/UplayDB/UplayKit</RepositoryUrl>
+    <PackageTags>uplay,ubisoft,protobuf</PackageTags>
+    <Version>136.2.10786.0</Version>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.21.9" />
+  </ItemGroup>
+
+</Project>
