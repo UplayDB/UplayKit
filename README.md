@@ -8,4 +8,4 @@ UplayKit => Communicating with dmx.upc.ubisoft.com backend.
 
 DecryptPackets => Decrypting the Base64 string (decrypt.txt) or the binary data (data.bin).
 
-UbiServives => Gathering Information from public-ubiservices.ubi, store.ubi, etc.
+UbiServices => Gathering Information from public-ubiservices.ubi, store.ubi, etc.
