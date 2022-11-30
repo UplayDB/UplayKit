@@ -1,9 +1,10 @@
 ﻿using Newtonsoft.Json;
 using RestSharp;
+using UbiServices.Records;
 
 namespace UbiServices
 {
-    partial class V2
+    public partial class V2
     {
         public static v2UserMe? GetUsersMe(string token, string sessionId)
         {

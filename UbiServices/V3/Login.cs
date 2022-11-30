@@ -1,10 +1,11 @@
 ﻿using Newtonsoft.Json;
 using RestSharp;
 using System.Text;
+using UbiServices.Records;
 
 namespace UbiServices
 {
-    partial class V3
+    public partial class V3
     {
         public static readonly string AppID = "f68a4bb5-608a-4ff2-8123-be8ef797e0a6";
         public static string UserAgent = "Massgate";

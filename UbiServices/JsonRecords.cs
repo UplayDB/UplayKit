@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace UbiServices
+namespace UbiServices.Records
 {
     #region Login
     public record LoginJson(
