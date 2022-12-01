@@ -2,6 +2,7 @@
 
 namespace UbiServices.Records
 {
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     #region Login
     public record LoginJson(
             [property: JsonProperty("platformType", NullValueHandling = NullValueHandling.Ignore)] string PlatformType,
@@ -233,4 +234,19 @@ namespace UbiServices.Records
         [property: JsonProperty("platforms", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<Platform> Platforms
     );
     #endregion
+    public class Request
+    {
+        [JsonProperty("indexName", NullValueHandling = NullValueHandling.Ignore)]
+
+        public string IndexName;
+
+
+        [JsonProperty("params", NullValueHandling = NullValueHandling.Ignore)]
+        public string Params;
+    }
+
+    public record RequestRoot(
+        [property: JsonProperty("requests", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<Request> Requests
+    );
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 }

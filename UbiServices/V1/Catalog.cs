@@ -2,7 +2,7 @@
 using RestSharp;
 using UbiServices.Records;
 
-namespace UbiServices
+namespace UbiServices.Public
 {
     public partial class V1
     {

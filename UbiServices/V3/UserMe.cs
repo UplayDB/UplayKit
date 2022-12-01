@@ -1,8 +1,9 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RestSharp;
 using UbiServices.Records;
 
-namespace UbiServices
+namespace UbiServices.Public
 {
     public partial class V3
     {
@@ -25,6 +26,31 @@ namespace UbiServices
             if (response.Content != null)
             {
                 return JsonConvert.DeserializeObject<UsersMe>(response.Content);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="sessionId"></param>
+        /// <param name="UserId"></param>
+        /// <param name="fields">NotImplementedYet</param>
+        /// <returns></returns>
+        public static JObject? GetUsersMeById(string token, string sessionId,string UserId,List<string> fields)
+        {
+            string URL = $"https://public-ubiservices.ubi.com/v3/users/{UserId}"; //?fields=status,communicationOptIn,communicationThirdPartyOptIn
+            var client = new RestClient(URL);
+            var request = new RestRequest();
+
+            request.AddHeader("Ubi-AppId", AppID);
+            request.AddHeader("Authorization", "Ubi_v1 t=" + token);
+            request.AddHeader("Ubi-SessionId", sessionId);
+            RestResponse response = client.GetAsync(request).Result;
+            if (response.Content != null)
+            {
+                return JObject.Parse(response.Content);
             }
             return null;
         }

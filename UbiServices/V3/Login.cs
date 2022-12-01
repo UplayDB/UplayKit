@@ -3,7 +3,7 @@ using RestSharp;
 using System.Text;
 using UbiServices.Records;
 
-namespace UbiServices
+namespace UbiServices.Public
 {
     public partial class V3
     {
