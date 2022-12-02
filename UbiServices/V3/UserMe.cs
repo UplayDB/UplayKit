@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using UbiServices.Records;
+using UbiServices.Store;
 
 namespace UbiServices.Public
 {
@@ -40,7 +41,19 @@ namespace UbiServices.Public
         /// <returns></returns>
         public static JObject? GetUsersMeById(string token, string sessionId,string UserId,List<string> fields)
         {
-            string URL = $"https://public-ubiservices.ubi.com/v3/users/{UserId}"; //?fields=status,communicationOptIn,communicationThirdPartyOptIn
+            string URL = $"https://public-ubiservices.ubi.com/v3/users/{UserId}";
+
+            
+            if (fields == null || fields.Count == 0)
+            {
+                //Just normal request should do anything
+            }
+            else
+            {
+                var filedscommas = String.Join(",", fields);
+                URL += "?fields=" + filedscommas;
+            }
+
             var client = new RestClient(URL);
             var request = new RestRequest();
 

@@ -9,7 +9,7 @@ namespace UbiServices.Public
     {
         public static readonly string AppID = "f68a4bb5-608a-4ff2-8123-be8ef797e0a6";
         public static string UserAgent = "Massgate";
-        public static readonly string URL = "https://public-ubiservices.ubi.com/v3/users/me";
+        public static readonly string URL = "https://public-ubiservices.ubi.com/v3/profile/sessions";
 
         /// <summary>
         /// 
