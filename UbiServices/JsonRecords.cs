@@ -234,6 +234,7 @@ namespace UbiServices.Records
         [property: JsonProperty("platforms", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<Platform> Platforms
     );
     #endregion
+    #region Requests
     public class Request
     {
         [JsonProperty("indexName", NullValueHandling = NullValueHandling.Ignore)]
@@ -248,5 +249,86 @@ namespace UbiServices.Records
     public record RequestRoot(
         [property: JsonProperty("requests", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<Request> Requests
     );
+    #endregion
+    #region Spaces
+    public record Spaces(
+        [property: JsonProperty("spaceId", NullValueHandling = NullValueHandling.Ignore)] string SpaceId,
+        [property: JsonProperty("spaceType", NullValueHandling = NullValueHandling.Ignore)] string SpaceType,
+        [property: JsonProperty("spaceName", NullValueHandling = NullValueHandling.Ignore)] string SpaceName,
+        [property: JsonProperty("parentSpaceId", NullValueHandling = NullValueHandling.Ignore)] string ParentSpaceId,
+        [property: JsonProperty("parentSpaceName", NullValueHandling = NullValueHandling.Ignore)] string ParentSpaceName,
+        [property: JsonProperty("releaseType", NullValueHandling = NullValueHandling.Ignore)] string ReleaseType,
+        [property: JsonProperty("platformType", NullValueHandling = NullValueHandling.Ignore)] string PlatformType,
+        [property: JsonProperty("dateCreated", NullValueHandling = NullValueHandling.Ignore)] DateTime DateCreated,
+        [property: JsonProperty("dateLastModified", NullValueHandling = NullValueHandling.Ignore)] DateTime DateLastModified,
+        [property: JsonProperty("tags", NullValueHandling = NullValueHandling.Ignore)] object Tags
+    );
+    #endregion
+    #region Betas
+    public record BetaPhase(
+    [property: JsonProperty("BetaPhaseId", NullValueHandling = NullValueHandling.Ignore)] int BetaPhaseId,
+    [property: JsonProperty("PhaseType", NullValueHandling = NullValueHandling.Ignore)] int PhaseType,
+    [property: JsonProperty("Name", NullValueHandling = NullValueHandling.Ignore)] string Name,
+    [property: JsonProperty("Tags", NullValueHandling = NullValueHandling.Ignore)] string Tags,
+    [property: JsonProperty("Active", NullValueHandling = NullValueHandling.Ignore)] bool Active,
+    [property: JsonProperty("SystemFields", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<SystemField> SystemFields,
+    [property: JsonProperty("PlayerGroups", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<PlayerGroup> PlayerGroups,
+    [property: JsonProperty("WebSiteUrl", NullValueHandling = NullValueHandling.Ignore)] string WebSiteUrl,
+    [property: JsonProperty("ThumbnailUrl", NullValueHandling = NullValueHandling.Ignore)] string ThumbnailUrl,
+    [property: JsonProperty("StartDate", NullValueHandling = NullValueHandling.Ignore)] DateTime? StartDate,
+    [property: JsonProperty("EndDate", NullValueHandling = NullValueHandling.Ignore)] DateTime? EndDate
+);
+
+    public record PlayerGroup(
+        [property: JsonProperty("PlayerGroupId", NullValueHandling = NullValueHandling.Ignore)] int PlayerGroupId,
+        [property: JsonProperty("Name", NullValueHandling = NullValueHandling.Ignore)] string Name,
+        [property: JsonProperty("Tags", NullValueHandling = NullValueHandling.Ignore)] string Tags,
+        [property: JsonProperty("PlatformId", NullValueHandling = NullValueHandling.Ignore)] int PlatformId,
+        [property: JsonProperty("DistributionMode", NullValueHandling = NullValueHandling.Ignore)] int DistributionMode,
+        [property: JsonProperty("AttributionDate", NullValueHandling = NullValueHandling.Ignore)] DateTime? AttributionDate
+    );
+
+    public record BetasRoot(
+        [property: JsonProperty("Code", NullValueHandling = NullValueHandling.Ignore)] string Code,
+        [property: JsonProperty("Name", NullValueHandling = NullValueHandling.Ignore)] string Name,
+        [property: JsonProperty("IntegrationType", NullValueHandling = NullValueHandling.Ignore)] int IntegrationType,
+        [property: JsonProperty("AllowC2S", NullValueHandling = NullValueHandling.Ignore)] bool AllowC2S,
+        [property: JsonProperty("SystemFields", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<SystemField> SystemFields,
+        [property: JsonProperty("BetaPhases", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<BetaPhase> BetaPhases,
+        [property: JsonProperty("Platforms", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<int> Platforms
+    );
+
+    public record SystemField(
+        [property: JsonProperty("SystemFieldId", NullValueHandling = NullValueHandling.Ignore)] int SystemFieldId,
+        [property: JsonProperty("FieldName", NullValueHandling = NullValueHandling.Ignore)] string FieldName,
+        [property: JsonProperty("FieldValue", NullValueHandling = NullValueHandling.Ignore)] string FieldValue,
+        [property: JsonProperty("FieldDefaultValue", NullValueHandling = NullValueHandling.Ignore)] string FieldDefaultValue,
+        [property: JsonProperty("UsedForPlayerRegistration", NullValueHandling = NullValueHandling.Ignore)] bool UsedForPlayerRegistration,
+        [property: JsonProperty("Description", NullValueHandling = NullValueHandling.Ignore)] string Description,
+        [property: JsonProperty("OrderNumber", NullValueHandling = NullValueHandling.Ignore)] int? OrderNumber,
+        [property: JsonProperty("IsMandatory", NullValueHandling = NullValueHandling.Ignore)] bool IsMandatory
+    );
+    #endregion
+    #region BetasProfile
+    public record PlayerSystemField(
+    [property: JsonProperty("FieldName", NullValueHandling = NullValueHandling.Ignore)] string FieldName,
+    [property: JsonProperty("FieldValue", NullValueHandling = NullValueHandling.Ignore)] string FieldValue
+);
+
+    public record BetasProfileRoot(
+        [property: JsonProperty("BetaPhaseId", NullValueHandling = NullValueHandling.Ignore)] int BetaPhaseId,
+        [property: JsonProperty("PlayerGroupId", NullValueHandling = NullValueHandling.Ignore)] int? PlayerGroupId,
+        [property: JsonProperty("PlatformId", NullValueHandling = NullValueHandling.Ignore)] int PlatformId,
+        [property: JsonProperty("IsApproved", NullValueHandling = NullValueHandling.Ignore)] bool IsApproved,
+        [property: JsonProperty("IsBanned", NullValueHandling = NullValueHandling.Ignore)] bool IsBanned,
+        [property: JsonProperty("DateRegistered", NullValueHandling = NullValueHandling.Ignore)] DateTime DateRegistered,
+        [property: JsonProperty("DateApprovedAction", NullValueHandling = NullValueHandling.Ignore)] DateTime? DateApprovedAction,
+        [property: JsonProperty("AccessCode", NullValueHandling = NullValueHandling.Ignore)] object AccessCode,
+        [property: JsonProperty("PlayerSourceIds", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<int> PlayerSourceIds,
+        [property: JsonProperty("CountryCode", NullValueHandling = NullValueHandling.Ignore)] string CountryCode,
+        [property: JsonProperty("PlayerKey", NullValueHandling = NullValueHandling.Ignore)] object PlayerKey,
+        [property: JsonProperty("PlayerSystemFields", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<PlayerSystemField> PlayerSystemFields
+    );
+    #endregion
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 }

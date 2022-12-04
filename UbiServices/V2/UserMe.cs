@@ -6,6 +6,12 @@ namespace UbiServices.Public
 {
     public partial class V2
     {
+        /// <summary>
+        /// Get User stuff from Ubi
+        /// </summary>
+        /// <param name="token">Ubi Token</param>
+        /// <param name="sessionId">Session Id</param>
+        /// <returns>v2UserMe or Null</returns>
         public static v2UserMe? GetUsersMe(string token, string sessionId)
         {
             string URL = $"https://public-ubiservices.ubi.com/v2/users/me";

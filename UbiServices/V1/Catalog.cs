@@ -7,14 +7,14 @@ namespace UbiServices.Public
     public partial class V1
     {
         /// <summary>
-        /// 
+        /// Get Spaces Catalog
         /// </summary>
-        /// <param name="token"></param>
-        /// <param name="sessionId"></param>
-        /// <param name="defaultOnly"></param>
-        /// <param name="offset"></param>
-        /// <param name="limit"></param>
-        /// <returns></returns>
+        /// <param name="token">Ubi Token</param>
+        /// <param name="sessionId">Session Id</param>
+        /// <param name="defaultOnly">Get the default or not</param>
+        /// <param name="offset">Offset where to start from</param>
+        /// <param name="limit">Limited number of category</param>
+        /// <returns>CatalogRoot or Null</returns>
         public static CatalogRoot? GetCatalog(string token, string sessionId, bool defaultOnly = true, uint offset = 0, uint limit = 100)
         {
             string URL = $"https://public-ubiservices.ubi.com/v1/spaces/global/ubiconnect/games/api/catalog";

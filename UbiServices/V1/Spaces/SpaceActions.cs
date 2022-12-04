@@ -3,22 +3,23 @@ using RestSharp;
 
 namespace UbiServices.Public
 {
-    public partial class V2
+    public partial class V1
     {
-        public partial class Applications
+        public partial class Spaces
         {
             /// <summary>
-            /// Get Application Configuration
+            /// 
             /// </summary>
-            /// <param name="ApplicationId">Ubi-AppId</param>
-            /// <returns>JObject or Null</returns>
-            public static JObject? GetApplicationConfig(string ApplicationId)
+            /// <param name="SpaceId"></param>
+            /// <returns></returns>
+            public static JObject? GetSpaceActions(string SpaceId)
             {
-                string URL = $"https://public-ubiservices.ubi.com/v2/applications/{ApplicationId}/configuration";
+                string URL = $"https://public-ubiservices.ubi.com/v1/spaces/{SpaceId}/actions";
+
                 var client = new RestClient(URL);
                 var request = new RestRequest();
 
-                request.AddHeader("Ubi-AppId", ApplicationId);
+                request.AddHeader("Ubi-AppId", V3.AppID);
                 RestResponse response = client.GetAsync(request).Result;
                 if (response.Content != null)
                 {

@@ -12,7 +12,7 @@ namespace UbiServices.Store
         /// <param name="products">List of productIds</param>
         /// <param name="expands">List of expandable</param>
         /// <param name="prodversion">Prod(Shop) Version</param>
-        /// <returns>Json Object or Null</returns>
+        /// <returns>JObject or Null</returns>
         public static JObject? GetStoreFrontByProducts(string storeType, List<string> products, List<string> expands, string prodversion = "v20_4")
         {
             string URL = $"https://store.ubi.com/s/{storeType}_uplaypc/dw/shop/{prodversion}/products/(";

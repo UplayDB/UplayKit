@@ -2,18 +2,17 @@
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using UbiServices.Records;
-using UbiServices.Store;
 
 namespace UbiServices.Public
 {
     public partial class V3
     {
         /// <summary>
-        /// 
+        /// Get User stuff from Ubi
         /// </summary>
-        /// <param name="token"></param>
-        /// <param name="sessionId"></param>
-        /// <returns></returns>
+        /// <param name="token">Ubi Token</param>
+        /// <param name="sessionId">Session Id</param>
+        /// <returns>UsersMe or Null</returns>
         public static UsersMe? GetUsersMe(string token, string sessionId)
         {
             string URL = $"https://public-ubiservices.ubi.com/v3/users/me";
@@ -32,18 +31,18 @@ namespace UbiServices.Public
         }
 
         /// <summary>
-        /// 
+        /// Get User stuff from Ubi by UserId
         /// </summary>
-        /// <param name="token"></param>
-        /// <param name="sessionId"></param>
-        /// <param name="UserId"></param>
-        /// <param name="fields">NotImplementedYet</param>
-        /// <returns></returns>
-        public static JObject? GetUsersMeById(string token, string sessionId,string UserId,List<string> fields)
+        /// <param name="token">Ubi Token</param>
+        /// <param name="sessionId">Session Id</param>
+        /// <param name="UserId">User Id</param>
+        /// <param name="fields">Fields Filter</param>
+        /// <returns>JObject or Null</returns>
+        public static JObject? GetUsersMeById(string token, string sessionId, string UserId, List<string> fields)
         {
             string URL = $"https://public-ubiservices.ubi.com/v3/users/{UserId}";
 
-            
+
             if (fields == null || fields.Count == 0)
             {
                 //Just normal request should do anything

@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using Newtonsoft.Json.Linq;
 using RestSharp;
 
 namespace UbiServices.Public
@@ -8,11 +8,11 @@ namespace UbiServices.Public
         public partial class Applications
         {
             /// <summary>
-            /// 
+            /// Get Application Parameters
             /// </summary>
-            /// <param name="ApplicationId"></param>
-            /// <returns></returns>
-            public static dynamic? GetApplicationParameters(string ApplicationId)
+            /// <param name="ApplicationId">Ubi-AppId</param>
+            /// <returns>JObject or Null</returns>
+            public static JObject? GetApplicationParameters(string ApplicationId)
             {
                 string URL = $"https://public-ubiservices.ubi.com/v2/applications/{ApplicationId}/parameters";
                 var client = new RestClient(URL);
@@ -22,7 +22,7 @@ namespace UbiServices.Public
                 RestResponse response = client.GetAsync(request).Result;
                 if (response.Content != null)
                 {
-                    return JsonConvert.DeserializeObject<dynamic>(response.Content);
+                    return JObject.Parse(response.Content);
                 }
                 return null;
             }

@@ -9,10 +9,10 @@ namespace UbiServices.Public
         public partial class Applications
         {
             /// <summary>
-            /// 
+            /// Get Application Info
             /// </summary>
-            /// <param name="ApplicationId"></param>
-            /// <returns></returns>
+            /// <param name="ApplicationId">Ubi-AppId</param>
+            /// <returns>V1Applications or Null</returns>
             public static V1Applications? GetApplications(string ApplicationId)
             {
                 string URL = $"https://public-ubiservices.ubi.com/v1/applications/{ApplicationId}";

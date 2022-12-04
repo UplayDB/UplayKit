@@ -12,23 +12,23 @@ namespace UbiServices.Public
         public static readonly string URL = "https://public-ubiservices.ubi.com/v3/profile/sessions";
 
         /// <summary>
-        /// 
+        /// Login via Email and Password
         /// </summary>
-        /// <param name="email"></param>
-        /// <param name="password"></param>
-        /// <returns></returns>
-        public static LoginJson? GetLogin(string email, string password)
+        /// <param name="email">User email</param>
+        /// <param name="password">User password</param>
+        /// <returns>LoginJson or Null</returns>
+        public static LoginJson? Login(string email, string password)
         {
             string b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{email}:{password}"));
-            return GetLoginBase64(b64);
+            return LoginBase64(b64);
         }
 
         /// <summary>
-        /// 
+        /// Login via Base64 mail and password
         /// </summary>
-        /// <param name="b64"></param>
-        /// <returns></returns>
-        public static LoginJson? GetLoginBase64(string b64)
+        /// <param name="b64">Base64 of Email:Password</param>
+        /// <returns>LoginJson or Null</returns>
+        public static LoginJson? LoginBase64(string b64)
         {
             var client = new RestClient(URL);
             var request = new RestRequest();
@@ -55,12 +55,12 @@ namespace UbiServices.Public
         }
 
         /// <summary>
-        /// 
+        /// Login via 2FA ticket and Code
         /// </summary>
-        /// <param name="tfaTicket"></param>
-        /// <param name="tfaCode"></param>
-        /// <returns></returns>
-        public static LoginJson? GetLogin2FA(string tfaTicket, string tfaCode)
+        /// <param name="tfaTicket">2FA Ticket</param>
+        /// <param name="tfaCode">Code from Auth device (mail,google)</param>
+        /// <returns>LoginJson or Null</returns>
+        public static LoginJson? Login2FA(string tfaTicket, string tfaCode)
         {
             var client = new RestClient(URL);
             var request = new RestRequest();
@@ -88,11 +88,11 @@ namespace UbiServices.Public
         }
 
         /// <summary>
-        /// 
+        /// Login via Remember Ticket
         /// </summary>
-        /// <param name="rememberTicket"></param>
-        /// <returns></returns>
-        public static LoginJson? GetLoginRemember(string rememberTicket)
+        /// <param name="rememberTicket">Remember Ticket</param>
+        /// <returns>LoginJson or Null</returns>
+        public static LoginJson? LoginRemember(string rememberTicket)
         {
             var client = new RestClient(URL);
             var request = new RestRequest();
@@ -119,12 +119,12 @@ namespace UbiServices.Public
         }
 
         /// <summary>
-        /// 
+        /// Login via Rem Ticket and Device ticket
         /// </summary>
-        /// <param name="rememberTicket"></param>
-        /// <param name="rememberDeviceTicket"></param>
-        /// <returns></returns>
-        public static LoginJson? GetLoginRememberDevice(string rememberTicket, string rememberDeviceTicket)
+        /// <param name="rememberTicket">Remember Ticket</param>
+        /// <param name="rememberDeviceTicket">Device Ticket</param>
+        /// <returns>LoginJson or Null</returns>
+        public static LoginJson? LoginRememberDevice(string rememberTicket, string rememberDeviceTicket)
         {
             var client = new RestClient(URL);
             var request = new RestRequest();

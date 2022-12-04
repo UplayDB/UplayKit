@@ -8,10 +8,10 @@ namespace UbiServices.Public
         public partial class Applications
         {
             /// <summary>
-            /// 
+            /// Get Application Configuration
             /// </summary>
-            /// <param name="ApplicationId"></param>
-            /// <returns></returns>
+            /// <param name="ApplicationId">Ubi-AppId</param>
+            /// <returns>JObject or Null</returns>
             public static JObject? GetApplicationConfig(string ApplicationId)
             {
                 string URL = $"https://public-ubiservices.ubi.com/v1/applications/{ApplicationId}/configuration";
