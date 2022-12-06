@@ -25,6 +25,7 @@ namespace UbiServices.Public
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JsonConvert.DeserializeObject<UsersMe>(response.Content);
             }
             return null;
@@ -62,6 +63,7 @@ namespace UbiServices.Public
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;

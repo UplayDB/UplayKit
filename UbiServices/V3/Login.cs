@@ -9,7 +9,7 @@ namespace UbiServices.Public
     {
         public static readonly string AppID = "f68a4bb5-608a-4ff2-8123-be8ef797e0a6";
         public static string UserAgent = "Massgate";
-        public static readonly string URL = "https://public-ubiservices.ubi.com/v3/profile/sessions";
+        public static readonly string URL = "https://public-ubiservices.ubi.com/v3/profiles/sessions";
 
         /// <summary>
         /// Login via Email and Password
@@ -48,6 +48,7 @@ namespace UbiServices.Public
 
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JsonConvert.DeserializeObject<LoginJson>(response.Content);
             }
 
@@ -81,6 +82,7 @@ namespace UbiServices.Public
 
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JsonConvert.DeserializeObject<LoginJson>(response.Content);
             }
 
@@ -112,6 +114,7 @@ namespace UbiServices.Public
 
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JsonConvert.DeserializeObject<LoginJson>(response.Content);
             }
 
@@ -145,6 +148,7 @@ namespace UbiServices.Public
 
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JsonConvert.DeserializeObject<LoginJson>(response.Content);
             }
 

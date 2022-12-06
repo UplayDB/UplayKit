@@ -24,6 +24,7 @@ namespace UbiServices.Store
             RestResponse response = client.PostAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -45,6 +46,7 @@ namespace UbiServices.Store
             RestResponse response = client.PostAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;

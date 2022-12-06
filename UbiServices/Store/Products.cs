@@ -44,6 +44,7 @@ namespace UbiServices.Store
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;

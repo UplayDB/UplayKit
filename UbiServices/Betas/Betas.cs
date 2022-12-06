@@ -13,7 +13,7 @@ namespace UbiServices
         /// </summary>
         /// <param name="AuthTicket">Ubi Token</param>
         /// <returns>BetasRoot or Null</returns>
-        public static BetasRoot? GetBetas(string AuthTicket)
+        public static List<BetasRoot>? GetBetas(string AuthTicket)
         {
             string URL = $"https://beta.ubi.com/api/v1/betas";
 
@@ -25,7 +25,8 @@ namespace UbiServices
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
-                return JsonConvert.DeserializeObject<BetasRoot>(response.Content);
+                Console.WriteLine(response.StatusCode);
+                return JsonConvert.DeserializeObject<List<BetasRoot>>(response.Content);
             }
             return null;
         }
@@ -48,6 +49,7 @@ namespace UbiServices
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JsonConvert.DeserializeObject<BetasProfileRoot>(response.Content);
             }
             return null;
@@ -71,6 +73,7 @@ namespace UbiServices
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -94,6 +97,7 @@ namespace UbiServices
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -118,6 +122,7 @@ namespace UbiServices
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -142,6 +147,7 @@ namespace UbiServices
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -167,6 +173,7 @@ namespace UbiServices
             RestResponse response = client.GetAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -200,6 +207,7 @@ namespace UbiServices
                 RestResponse response = client.PutAsync(request).Result;
                 if (response.Content != null)
                 {
+                    Console.WriteLine(response.StatusCode);
                     return JObject.Parse(response.Content);
                 }
             }
@@ -208,6 +216,7 @@ namespace UbiServices
                 RestResponse response = client.PostAsync(request).Result;
                 if (response.Content != null)
                 {
+                    Console.WriteLine(response.StatusCode);
                     return JObject.Parse(response.Content);
                 }
             }
@@ -226,7 +235,7 @@ namespace UbiServices
         /// <param name="bodyJson"></param>
         /// <param name="Method"></param>
         /// <returns></returns>
-        public static JObject? JoinToBeta(string AuthTicket, string BetaCode, string PhaseId, string PlayerGroupId, string ProfileId, string PlatfromId, string bodyJson, string Method = "POST")
+        public static JObject? JoinToBetaGroup(string AuthTicket, string BetaCode, string PhaseId, string PlayerGroupId, string ProfileId, string PlatfromId, string bodyJson, string Method = "POST")
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/players/{ProfileId}/playergroups/{PlayerGroupId}?platformId={PlatfromId}";
 
@@ -243,6 +252,7 @@ namespace UbiServices
                 RestResponse response = client.PutAsync(request).Result;
                 if (response.Content != null)
                 {
+                    Console.WriteLine(response.StatusCode);
                     return JObject.Parse(response.Content);
                 }
             }
@@ -251,6 +261,7 @@ namespace UbiServices
                 RestResponse response = client.PostAsync(request).Result;
                 if (response.Content != null)
                 {
+                    Console.WriteLine(response.StatusCode);
                     return JObject.Parse(response.Content);
                 }
             }
@@ -282,6 +293,7 @@ namespace UbiServices
             RestResponse response = client.PostAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -313,6 +325,7 @@ namespace UbiServices
             RestResponse response = client.PostAsync(request).Result;
             if (response.Content != null)
             {
+                Console.WriteLine(response.StatusCode);
                 return JObject.Parse(response.Content);
             }
             return null;
@@ -358,6 +371,7 @@ namespace UbiServices
                 RestResponse response = client.PutAsync(request).Result;
                 if (response.Content != null)
                 {
+                    Console.WriteLine(response.StatusCode);
                     return JObject.Parse(response.Content);
                 }
             }
@@ -366,6 +380,7 @@ namespace UbiServices
                 RestResponse response = client.PostAsync(request).Result;
                 if (response.Content != null)
                 {
+                    Console.WriteLine(response.StatusCode);
                     return JObject.Parse(response.Content);
                 }
             }
