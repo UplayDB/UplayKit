@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using RestSharp;
+using UbiServices.Records;
 
 namespace UbiServices.Public
 {
@@ -12,7 +13,7 @@ namespace UbiServices.Public
             /// </summary>
             /// <param name="SpaceId"></param>
             /// <returns></returns>
-            public static Spaces? GetSpaces(string SpaceId)
+            public static V1Spaces? GetSpaces(string SpaceId)
             {
                 string URL = $"https://public-ubiservices.ubi.com/v1/spaces/{SpaceId}";
                 var client = new RestClient(URL);
@@ -22,7 +23,7 @@ namespace UbiServices.Public
                 RestResponse response = client.GetAsync(request).Result;
                 if (response.Content != null)
                 {
-                    return JsonConvert.DeserializeObject<Spaces>(response.Content);
+                    return JsonConvert.DeserializeObject<V1Spaces>(response.Content);
                 }
                 return null;
             }

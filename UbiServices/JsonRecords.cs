@@ -251,7 +251,7 @@ namespace UbiServices.Records
     );
     #endregion
     #region Spaces
-    public record Spaces(
+    public record V1Spaces(
         [property: JsonProperty("spaceId", NullValueHandling = NullValueHandling.Ignore)] string SpaceId,
         [property: JsonProperty("spaceType", NullValueHandling = NullValueHandling.Ignore)] string SpaceType,
         [property: JsonProperty("spaceName", NullValueHandling = NullValueHandling.Ignore)] string SpaceName,
