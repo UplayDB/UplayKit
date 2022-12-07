@@ -29,21 +29,23 @@ namespace DiscordBot
         {
             if (!File.Exists("token.txt"))
             {
+                Console.WriteLine("No token");
                 return;
             }
             else
             {
-                token = File.ReadAllLines("token")[0];
+                token = File.ReadAllLines("token.txt")[0];
             
             }
 
             if (!File.Exists("guild.txt"))
             {
+                Console.WriteLine("No guild");
                 return;
             }
             else
             {
-                guildId = ulong.Parse(File.ReadAllLines("guild")[0]);
+                guildId = ulong.Parse(File.ReadAllLines("guild.txt")[0]);
 
             }
 
@@ -66,13 +68,15 @@ namespace DiscordBot
         }
 
 
-        private async Task Ready() // Ready event.
+        private async Task Ready()
         {
             SocketGuild guild = _client.GetGuild(guildId);
             if (guild == null) { Console.WriteLine("Failed to get guild ID!"); return; }
 
             List<SlashCommandProperties> vCmd = new();
 
+            // Use this to remove old commands
+            //await guild.DeleteApplicationCommandsAsync(new RequestOptions() { AuditLogReason = "Reset" });
 
             await _client.SetGameAsync("Uplay Failure" , "" , ActivityType.Watching);
 
@@ -81,15 +85,14 @@ namespace DiscordBot
             vCmd.Add(new SlashCommandBuilder()
             .WithName("getspace")
             .WithDescription("Get space by SpaceId.")
-            .AddOption("x", ApplicationCommandOptionType.String, "Th543647367u.", true)
+            .AddOption("spaceid", ApplicationCommandOptionType.String, "The SpaceId.", true)
             .Build()
             );
 
 
             vCmd.Add(new SlashCommandBuilder()
-            .WithName("tu_02")
-            .WithDescription("test 02.")
-            .AddOption("x", ApplicationCommandOptionType.String, "sdr45.", true)
+            .WithName("pingpong")
+            .WithDescription("Pong")
             .Build()
             );
 
@@ -108,15 +111,14 @@ namespace DiscordBot
             .WithDescription("")
             .WithColor(Color.Green)
             .WithCurrentTimestamp();
-            var desc = "";
             switch (cmd.Data.Name)
             {
                 case "getspace":
                     embedBuiler = getspace(embedBuiler,cmd);
                     await cmd.RespondAsync(embed: embedBuiler.Build());
                     return;
-                case "tu_02":
-                    embedBuiler.Title = tu02();
+                case "pingpong":
+                    embedBuiler = pong(embedBuiler, cmd);
                     await cmd.RespondAsync(embed: embedBuiler.Build());
                     return;
                 default:
@@ -129,6 +131,7 @@ namespace DiscordBot
         {
             var desc = "";
             embed.Title = "Getting Spaces!";
+            //Todo check for pattern
             var callback = UbiServices.Public.V1.Spaces.GetSpaces((string)cmd.Data.Options.ToList()[0].Value);
             if (callback == null)
             {
@@ -142,10 +145,11 @@ namespace DiscordBot
             return embed;
         }
 
-        private string tu02()
+        private EmbedBuilder pong(EmbedBuilder embed, SocketSlashCommand cmd)
         {
-
-            return "TEST 2";
+            embed.Title = "Pong";
+            embed.Description = "Pong";
+            return embed;
         }
     }
 }
