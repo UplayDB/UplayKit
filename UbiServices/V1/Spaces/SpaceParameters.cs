@@ -8,14 +8,17 @@ namespace UbiServices.Public
         public partial class Spaces
         {
             /// <summary>
-            /// 
+            /// Get Space Parameters
             /// </summary>
-            /// <param name="SpaceId"></param>
-            /// <param name="ParameterGroup"></param>
-            /// <returns></returns>
+            /// <param name="SpaceId">Space Id</param>
+            /// <param name="ParameterGroup">Filter by ParameterGroup</param>
+            /// <returns>JObject or Null</returns>
             public static JObject? GetSpaceParameters(string SpaceId, string ParameterGroup = "")
             {
-                string URL = $"https://public-ubiservices.ubi.com/v1/spaces/{SpaceId}/parameters";
+                if (!Validations.IdValidation(SpaceId))
+                    return null;
+
+                string URL = $"{URL_V1Spaces}{SpaceId}/parameters";
 
                 if (ParameterGroup != "")
                 {

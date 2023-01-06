@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Title>$(AssemblyName)</Title>
+    <Description>C# Lib to communicate with Uplay Demux Backend</Description>
+	<Company>UplayDB</Company>
+	<Authors>UplayDB,SlejmUr</Authors>
+    <PackageProjectUrl>https://github.com/UplayDB/UplayKit</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/UplayDB/UplayKit</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>uplay,ubisoft,api,demux</PackageTags>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+	<Copyright>Copyright © UplayDB Team 2022</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.21.11" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    <PackageReference Include="RestSharp" Version="108.0.3" />
+    <PackageReference Include="SharpZipLib" Version="1.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Protobufs\Protobufs.csproj" />
+  </ItemGroup>
+
+</Project>

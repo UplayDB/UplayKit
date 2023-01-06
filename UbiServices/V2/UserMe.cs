@@ -6,6 +6,7 @@ namespace UbiServices.Public
 {
     public partial class V2
     {
+        public static readonly string URL_UsersMe = Urls.GetUrl("v2/users/me");
         /// <summary>
         /// Get User stuff from Ubi
         /// </summary>
@@ -14,8 +15,7 @@ namespace UbiServices.Public
         /// <returns>v2UserMe or Null</returns>
         public static v2UserMe? GetUsersMe(string token, string sessionId)
         {
-            string URL = $"https://public-ubiservices.ubi.com/v2/users/me";
-            var client = new RestClient(URL);
+            var client = new RestClient(URL_UsersMe);
             var request = new RestRequest();
 
             request.AddHeader("Ubi-AppId", V3.AppID);

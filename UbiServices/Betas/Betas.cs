@@ -56,11 +56,11 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Get Beta by BetaCode
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? GetBetasByCode(string AuthTicket, string BetaCode)
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}";
@@ -80,11 +80,11 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Get phases by BetaCode
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? GetBetasPhases(string AuthTicket, string BetaCode)
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases";
@@ -104,12 +104,12 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Get Data from Phase by Id and BetaCode
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? GetBetasPhase(string AuthTicket, string BetaCode, string PhaseId)
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}";
@@ -129,12 +129,12 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Get Playergroups from Phase by ID and BetaCode
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? GetBetasPhasePlayergroups(string AuthTicket, string BetaCode, string PhaseId)
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/playergroups";
@@ -154,13 +154,13 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Get Data from Groups by Ids and BetaCode
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
-        /// <param name="PlayerGroupId"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
+        /// <param name="PlayerGroupId">Group Id</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? GetBetasPhasePlayergroup(string AuthTicket, string BetaCode, string PhaseId, string PlayerGroupId)
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/playergroups/{PlayerGroupId}";
@@ -180,16 +180,16 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Join the Beta with provided information
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
-        /// <param name="ProfileId"></param>
-        /// <param name="PlatfromId"></param>
-        /// <param name="bodyJson"></param>
-        /// <param name="Method"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
+        /// <param name="ProfileId">Profile Id (Same as the token author)</param>
+        /// <param name="PlatfromId">Platform Id (usually 1)</param>
+        /// <param name="bodyJson">-</param>
+        /// <param name="Method">PUT or POST</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? JoinToBeta(string AuthTicket, string BetaCode, string PhaseId, string ProfileId, string PlatfromId, string bodyJson, string Method = "POST")
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/players/{ProfileId}?platformId={PlatfromId}";
@@ -224,17 +224,17 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Join the Beta with provided information
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
-        /// <param name="PlayerGroupId"></param>
-        /// <param name="ProfileId"></param>
-        /// <param name="PlatfromId"></param>
-        /// <param name="bodyJson"></param>
-        /// <param name="Method"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
+        /// <param name="PlayerGroupId">Group Id</param>
+        /// <param name="ProfileId">Profile Id (Same as the token author)</param>
+        /// <param name="PlatfromId">Platform Id (usually 1)</param>
+        /// <param name="bodyJson">-</param>
+        /// <param name="Method">PUT or POST</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? JoinToBetaGroup(string AuthTicket, string BetaCode, string PhaseId, string PlayerGroupId, string ProfileId, string PlatfromId, string bodyJson, string Method = "POST")
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/players/{ProfileId}/playergroups/{PlayerGroupId}?platformId={PlatfromId}";
@@ -269,15 +269,15 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Send Friend Invite the Beta with provided information
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
-        /// <param name="ProfileId"></param>
-        /// <param name="PlatfromId"></param>
-        /// <param name="FriendsId"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
+        /// <param name="ProfileId">Profile Id (Same as the token author)</param>
+        /// <param name="PlatfromId">Platform Id (usually 1)</param>
+        /// <param name="FriendsId">Friend Id</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? PostFriendInviteToBeta(string AuthTicket, string BetaCode, string PhaseId, string ProfileId, string PlatfromId, string FriendsId)
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/players/{ProfileId}/friends?platformId={PlatfromId}";
@@ -300,16 +300,16 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Send Friend Invite the Beta with provided information
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
-        /// <param name="PlayerGroupId"></param>
-        /// <param name="ProfileId"></param>
-        /// <param name="PlatfromId"></param>
-        /// <param name="FriendsId"></param>
-        /// <returns></returns>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
+        /// <param name="PlayerGroupId">Group Id</param>
+        /// <param name="ProfileId">Profile Id (Same as the token author)</param>
+        /// <param name="PlatfromId">Platform Id (usually 1)</param>
+        /// <param name="FriendsId">Friend Id</param>
+        /// <returns>JObject or Null</returns>
         public static JObject? PostFriendInviteToBeta(string AuthTicket, string BetaCode, string PhaseId, string PlayerGroupId, string ProfileId, string PlatfromId, string FriendsId)
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/players/{ProfileId}/playergroups/{PlayerGroupId}/friends?platformId={PlatfromId}";
@@ -332,26 +332,22 @@ namespace UbiServices
         }
 
         /// <summary>
-        /// 
+        /// Update user platform choice
         /// </summary>
-        /// <param name="AuthTicket"></param>
-        /// <param name="ProfileId"></param>
-        /// <param name="BetaCode"></param>
-        /// <param name="PhaseId"></param>
+        /// <param name="AuthTicket">Ubi Token</param>
+        /// <param name="ProfileId">Profile Id (Same as the token author)</param>
+        /// <param name="BetaCode">Beta Code</param>
+        /// <param name="PhaseId">Phase Id</param>
         /// <param name="PlayerGroupId">Can be empty (use "" or String.Empty)</param>
-        /// <param name="oldPlatform"></param>
-        /// <param name="newPlatform"></param>
+        /// <param name="oldPlatform">Platform Id</param>
+        /// <param name="newPlatform">Platform Id</param>
         /// <param name="Method">PUT or POST</param>
-        /// <returns></returns>
+        /// <returns>JObject or Null</returns>
         public static JObject? UpdatePlatform(string AuthTicket, string ProfileId, string BetaCode, string PhaseId, string PlayerGroupId, string oldPlatform, string newPlatform, string Method = "PUT")
         {
             string URL = $"https://beta.ubi.com/api/v1/{BetaCode}/phases/{PhaseId}/players/{ProfileId}";
 
-            if (PlayerGroupId == "" || PlayerGroupId == string.Empty)
-            {
-                //Do nothing
-            }
-            else
+            if (PlayerGroupId != "" || !string.IsNullOrEmpty(PlayerGroupId))
             {
                 URL += $"playergroups/{PlayerGroupId}";
             }

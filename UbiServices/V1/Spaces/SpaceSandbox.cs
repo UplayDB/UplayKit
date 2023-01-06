@@ -8,13 +8,16 @@ namespace UbiServices.Public
         public partial class Spaces
         {
             /// <summary>
-            /// 
+            /// Get Space Sandboxes
             /// </summary>
-            /// <param name="SpaceId"></param>
-            /// <returns></returns>
+            /// <param name="SpaceId">Space Id</param>
+            /// <returns>JObject or Null</returns>
             public static JObject? GetSpaceSandbox(string SpaceId)
             {
-                string URL = $"https://public-ubiservices.ubi.com/v1/spaces/{SpaceId}/sandboxes";
+                if (!Validations.IdValidation(SpaceId))
+                    return null;
+
+                string URL = $"{URL_V1Spaces}{SpaceId}/sandboxes";
 
                 var client = new RestClient(URL);
                 var request = new RestRequest();

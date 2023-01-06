@@ -8,6 +8,7 @@ namespace UbiServices.Public
     {
         public partial class Applications
         {
+            public static readonly string URL_V1Applications = Urls.GetUrl("v1/applications/");
             /// <summary>
             /// Get Application Info
             /// </summary>
@@ -15,7 +16,10 @@ namespace UbiServices.Public
             /// <returns>V1Applications or Null</returns>
             public static V1Applications? GetApplications(string ApplicationId)
             {
-                string URL = $"https://public-ubiservices.ubi.com/v1/applications/{ApplicationId}";
+                if (!Validations.IdValidation(ApplicationId))
+                    return null;
+
+                string URL = $"{URL_V1Applications}{ApplicationId}";
                 var client = new RestClient(URL);
                 var request = new RestRequest();
 

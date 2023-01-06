@@ -8,19 +8,33 @@ namespace UbiServices.Store
         /// <summary>
         /// Getting the Storefront data from productIds
         /// </summary>
-        /// <param name="storeType"></param>
+        /// <param name="countrycode">Country Code</param>
         /// <param name="products">List of productIds</param>
         /// <param name="expands">List of expandable</param>
+        /// <param name="IsPC">Ubisoft or UplayPC</param>
         /// <param name="prodversion">Prod(Shop) Version</param>
         /// <returns>JObject or Null</returns>
-        public static JObject? GetStoreFrontByProducts(string storeType, List<string> products, List<string> expands, string prodversion = "v20_4")
+        public static JObject? GetStoreFrontByProducts(Enums.CountryCode countrycode, List<string> products, List<string> expands, bool IsPC = true, Enums.StoreVersion prodversion = Enums.StoreVersion.v22_10)
         {
-            string URL = $"https://store.ubi.com/s/{storeType}_uplaypc/dw/shop/{prodversion}/products/(";
+            string store = "";
+            if (IsPC)
+            {
+                store = "_uplaypc";
+            }
+            else
+            {
+                store = "_ubisoft";
+            }
+            string URL = $"https://store.ubi.com/s/{countrycode.ToString()}{store}/dw/shop/{prodversion.ToString()}/products/(";
             string URL_End = ")?client_id=2a3b13e8-a80b-4795-853a-4cd52645919b";
 
             if (products == null || products.Count == 0)
             {
                 return null;
+            }
+            else if (products.Count == 1)
+            {
+                URL += products[0] + URL_End;
             }
             else
             {
@@ -38,15 +52,20 @@ namespace UbiServices.Store
                 URL += "&expand=" + expandswithcommas;
             }
 
+            //Console.WriteLine(URL);
             var client = new RestClient(URL);
             var request = new RestRequest();
 
-            RestResponse response = client.GetAsync(request).Result;
-            if (response.Content != null)
+            try
             {
-                Console.WriteLine(response.StatusCode);
-                return JObject.Parse(response.Content);
+                RestResponse response = client.Get(request);
+                if (response.Content != null)
+                {
+                    return JObject.Parse(response.Content);
+                }
             }
+            catch { }
+
             return null;
         }
     }

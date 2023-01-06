@@ -8,22 +8,25 @@ namespace UbiServices.Public
         public partial class Spaces
         {
             /// <summary>
-            /// 
+            /// Get All Items from Space
             /// </summary>
-            /// <param name="SpaceId"></param>
+            /// <param name="SpaceId">Space Id</param>
             /// <param name="AuthTicket"></param>
             /// <param name="LocaleCode"></param>
-            /// <returns></returns>
-            public static JObject? GetSpaceAllItems(string SpaceId, string AuthTicket, string LocaleCode = "en-US")
+            /// <returns>JObject or Null</returns>
+            public static JObject? GetSpaceAllItems(string SpaceId, string AuthTicket, Enums.LocaleCode LocaleCode = Enums.LocaleCode.en_US)
             {
-                string URL = $"https://public-ubiservices.ubi.com/v1/spaces/{SpaceId}/items/all";
+                if (!Validations.IdValidation(SpaceId))
+                    return null;
+
+                string URL = $"{URL_V1Spaces}{SpaceId}/items/all";
 
                 var client = new RestClient(URL);
                 var request = new RestRequest();
 
                 request.AddHeader("Ubi-AppId", V3.AppID);
                 request.AddHeader("Authorization", $"Ubi_v1 t={AuthTicket}");
-                request.AddHeader("Ubi-localeCode", LocaleCode);
+                request.AddHeader("Ubi-localeCode", LocaleCode.ToString().Replace("_", "-"));
                 RestResponse response = client.GetAsync(request).Result;
                 if (response.Content != null)
                 {

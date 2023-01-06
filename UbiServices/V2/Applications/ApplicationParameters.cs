@@ -14,7 +14,10 @@ namespace UbiServices.Public
             /// <returns>JObject or Null</returns>
             public static JObject? GetApplicationParameters(string ApplicationId)
             {
-                string URL = $"https://public-ubiservices.ubi.com/v2/applications/{ApplicationId}/parameters";
+                if (!Validations.IdValidation(ApplicationId))
+                    return null;
+
+                string URL = $"{URL_V2Applications}{ApplicationId}/parameters";
                 var client = new RestClient(URL);
                 var request = new RestRequest();
 

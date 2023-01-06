@@ -6,6 +6,7 @@ namespace UbiServices.Public
 {
     public partial class V1
     {
+        public static readonly string URL_V1Spaces = Urls.GetUrl("v1/spaces/");
         /// <summary>
         /// Get Spaces Catalog
         /// </summary>
@@ -17,7 +18,10 @@ namespace UbiServices.Public
         /// <returns>CatalogRoot or Null</returns>
         public static CatalogRoot? GetCatalog(string token, string sessionId, bool defaultOnly = true, uint offset = 0, uint limit = 100)
         {
-            string URL = $"https://public-ubiservices.ubi.com/v1/spaces/global/ubiconnect/games/api/catalog";
+            if (!Validations.IdValidation(sessionId))
+                return null;
+
+            string URL = $"{URL_V1Spaces}/global/ubiconnect/games/api/catalog";
 
             URL += "&defaultOnly=" + defaultOnly.ToString().ToLower();
             URL += "&offset=" + offset.ToString().ToLower();

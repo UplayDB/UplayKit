@@ -7,6 +7,8 @@ namespace UbiServices.Public
 {
     public partial class V3
     {
+        public static readonly string URL_Users = Urls.GetUrl("v3/users/");
+
         /// <summary>
         /// Get User stuff from Ubi
         /// </summary>
@@ -15,8 +17,7 @@ namespace UbiServices.Public
         /// <returns>UsersMe or Null</returns>
         public static UsersMe? GetUsersMe(string token, string sessionId)
         {
-            string URL = $"https://public-ubiservices.ubi.com/v3/users/me";
-            var client = new RestClient(URL);
+            var client = new RestClient(URL_Users + "me");
             var request = new RestRequest();
 
             request.AddHeader("Ubi-AppId", AppID);
@@ -41,7 +42,7 @@ namespace UbiServices.Public
         /// <returns>JObject or Null</returns>
         public static JObject? GetUsersMeById(string token, string sessionId, string UserId, List<string> fields)
         {
-            string URL = $"https://public-ubiservices.ubi.com/v3/users/{UserId}";
+            string URL = $"{URL_Users}{UserId}";
 
 
             if (fields == null || fields.Count == 0)

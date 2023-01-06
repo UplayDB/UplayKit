@@ -9,13 +9,16 @@ namespace UbiServices.Public
         public partial class Spaces
         {
             /// <summary>
-            /// 
+            /// Get Space Info
             /// </summary>
-            /// <param name="SpaceId"></param>
-            /// <returns></returns>
+            /// <param name="SpaceId">Space Id</param>
+            /// <returns>V1Spaces or Null</returns>
             public static V1Spaces? GetSpaces(string SpaceId)
             {
-                string URL = $"https://public-ubiservices.ubi.com/v1/spaces/{SpaceId}";
+                if (!Validations.IdValidation(SpaceId))
+                    return null;
+
+                string URL = $"{URL_V1Spaces}{SpaceId}";
                 var client = new RestClient(URL);
                 var request = new RestRequest();
 

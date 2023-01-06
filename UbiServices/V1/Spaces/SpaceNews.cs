@@ -8,19 +8,22 @@ namespace UbiServices.Public
         public partial class Spaces
         {
             /// <summary>
-            /// 
+            /// Get News from Space
             /// </summary>
-            /// <param name="SpaceId"></param>
-            /// <param name="localeCode"></param>
-            /// <returns></returns>
-            public static JObject? GetNews(string SpaceId, string localeCode = "en-US")
+            /// <param name="SpaceId">Space Id</param>
+            /// <param name="LocaleCode"></param>
+            /// <returns>JObject or Null</returns>
+            public static JObject? GetNews(string SpaceId, Enums.LocaleCode LocaleCode = Enums.LocaleCode.en_US)
             {
-                string URL = $"https://msr-public-ubiservices.ubi.com/v1/spaces/news?spaceId={SpaceId}";
+                if (!Validations.IdValidation(SpaceId))
+                    return null;
+
+                string URL = $"{URL_V1Spaces}/news?spaceId={SpaceId}";
                 var client = new RestClient(URL);
                 var request = new RestRequest();
 
                 request.AddHeader("Ubi-AppId", V3.AppID);
-                request.AddHeader("Ubi-localeCode", localeCode);
+                request.AddHeader("Ubi-localeCode", LocaleCode.ToString().Replace("_", "-"));
 
                 RestResponse response = client.GetAsync(request).Result;
                 if (response.Content != null)

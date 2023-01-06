@@ -36,9 +36,9 @@ namespace UbiServices.Store
         /// <param name="storeType">ie,uk,us</param>
         /// <param name="productIds">List of productIds</param>
         /// <returns>JObject or Null</returns>
-        public static JObject? PostStoreAlgoliaQuery(string storeType, List<string> productIds)
+        public static JObject? PostStoreAlgoliaQuery(Enums.CountryCode storeType, List<string> productIds)
         {
-            string URL = $"https://xely3u4lod-dsn.algolia.net/1/indexes/{storeType}_custom_MFE/query?x-algolia-agent=Algolia%20for%20JavaScript%20(4.8.5)%3B%20Browser&x-algolia-application-id=XELY3U4LOD&x-algolia-api-key=5638539fd9edb8f2c6b024b49ec375bd";
+            string URL = $"https://xely3u4lod-dsn.algolia.net/1/indexes/{storeType.ToString()}_custom_MFE/query?x-algolia-agent=Algolia%20for%20JavaScript%20(4.8.5)%3B%20Browser&x-algolia-application-id=XELY3U4LOD&x-algolia-api-key=5638539fd9edb8f2c6b024b49ec375bd";
             var client = new RestClient(URL);
             var request = new RestRequest();
 
