@@ -48,7 +48,6 @@ namespace UplayKit
             if (bytes == null)
                 return default;
 
-
             byte[] buffer = new byte[4];
 
             using var ms = new MemoryStream(bytes);
@@ -56,7 +55,6 @@ namespace UplayKit
             var responseLength = FormatLength(BitConverter.ToUInt32(buffer, 0));
             if (responseLength == 0)
                 return default;
-
 
             MessageParser<T> parser = new(() => new T());
             return parser.ParseFrom(ms);

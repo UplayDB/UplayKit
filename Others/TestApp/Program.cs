@@ -1,12 +1,9 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel;
-using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using UbiServices.Records;
 using UplayKit;
 using UplayKit.Connection;
-using UplayKit.Services;
 using static UbiServices.Public.V3;
 
 namespace TestApp
@@ -15,7 +12,7 @@ namespace TestApp
     {
         static void Main(string[] args)
         {
-            Console.WriteLine(String.Join(",",args));
+            Console.WriteLine(String.Join(",", args));
             Console.ReadLine();
             LoginJson? login;
             if (HasParameter(args, "-b64"))

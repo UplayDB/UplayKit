@@ -4,7 +4,6 @@ using RestSharp;
 using System.ComponentModel;
 using UbiServices;
 using UbiServices.Records;
-using Uplay.Friends;
 using Uplay.Store;
 using UplayKit;
 using UplayKit.Connection;
@@ -17,7 +16,7 @@ namespace UplayManifests
         static void Main(string[] args)
         {
             LoginJson? login;
-            var currentDir = GetParameter(args, "-dir",Environment.CurrentDirectory);
+            var currentDir = GetParameter(args, "-dir", Environment.CurrentDirectory);
             if (!HasParameter(args, "-skip"))
             {
 
@@ -354,12 +353,12 @@ namespace UplayManifests
 
             if (HasParameter(args, "-csv"))
             {
-                foreach (var file in Directory.GetFileSystemEntries(currentDir + "\\files","*.manifest",SearchOption.AllDirectories))
+                foreach (var file in Directory.GetFileSystemEntries(currentDir + "\\files", "*.manifest", SearchOption.AllDirectories))
                 {
                     var splitted = file.Split("_");
                     Console.WriteLine(splitted[0]);
-                    var prodId = uint.Parse(splitted[0].Replace(currentDir+"\\files\\",""));
-                    var manifestId = splitted[1].Replace(".manifest","");
+                    var prodId = uint.Parse(splitted[0].Replace(currentDir + "\\files\\", ""));
+                    var manifestId = splitted[1].Replace(".manifest", "");
                     Dumper.Dump(Parsers.ParseManifestFile(file), file.Replace(".manifest", ".txt"));
                     Dumper.DumpAsCSV(Parsers.ParseManifestFile(file), null, file.Replace(".manifest", ""), manifestId, prodId);
                 }

@@ -34,8 +34,7 @@ namespace UplayKit.Services
             {
                 return null;
             }
-
-            return Downstream.Parser.ParseFrom(rsp.ServiceRsp.Data.ToByteArray()).Response;
+            return Formatters.FormatDataNoLength<Downstream>(rsp.ServiceRsp.Data.ToByteArray()).Response;
         }
         #endregion
         #region Function

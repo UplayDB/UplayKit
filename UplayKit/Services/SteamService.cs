@@ -5,6 +5,7 @@ namespace UplayKit.Services
 {
     public class SteamService
     {
+        #region Base
         private DemuxSocket socket;
         public bool isServiceSuccess = false;
         public SteamService(DemuxSocket demuxSocket)
@@ -12,7 +13,8 @@ namespace UplayKit.Services
             socket = demuxSocket;
             Console.WriteLine("SteamService is Ready");
         }
-
+        #endregion
+        #region Request
         public Rsp? SendRequest(Req req)
         {
             Upstream post = new() { Request = req };
@@ -33,10 +35,10 @@ namespace UplayKit.Services
                 return null;
             }
 
-            return Downstream.Parser.ParseFrom(rsp.ServiceRsp.Data.ToByteArray()).Response;
+            return Formatters.FormatDataNoLength<Downstream>(rsp.ServiceRsp.Data.ToByteArray()).Response;
         }
-
-
+        #endregion
+        #region Function
         public List<SteamUserInfo> GetSteamFriends(string SteamID)
         {
             Req req = new()
@@ -79,5 +81,6 @@ namespace UplayKit.Services
                 return new();
             }
         }
+        #endregion
     }
 }

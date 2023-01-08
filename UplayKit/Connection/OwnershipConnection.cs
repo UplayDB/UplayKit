@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Newtonsoft.Json;
 using Uplay.Ownership;
 
 namespace UplayKit.Connection
@@ -117,36 +118,30 @@ namespace UplayKit.Connection
         /// Initializer
         /// </summary>
         /// <returns></returns>
-        public List<OwnedGame>? GetOwnedGames(bool writeToFile = false, List<InitializeReq.Types.ProductBranchData> branchdatas = null)
+        public List<OwnedGame>? GetOwnedGames(bool writeToFile = false)
         {
-            if (branchdatas == null)
-            {
-                branchdatas = new();
-            }
-
-            Req initializeReqOwnership = new()
+            Req req = new()
             {
                 RequestId = ReqId,
                 InitializeReq = new()
                 {
                     GetAssociations = true,
                     ProtoVersion = 7,
-                    UseStaging = socket.TestConfig,
-                    Branches = { branchdatas }
+                    UseStaging = socket.TestConfig
                 }
             };
             ReqId += 1;
-            var initializeRspOwnership = SendRequest(initializeReqOwnership);
-            if (initializeRspOwnership != null)
+            var rsp = SendRequest(req);
+            if (rsp != null)
             {
-                isServiceSuccess = initializeRspOwnership.InitializeRsp.Success;
+                isServiceSuccess = rsp.InitializeRsp.Success;
 
                 if (writeToFile)
                 {
-                    File.WriteAllText("Ownership", initializeRspOwnership.InitializeRsp.ToString());
+                    File.WriteAllText("Ownership.json", JsonConvert.SerializeObject(rsp.InitializeRsp, Formatting.Indented));
                 }
 
-                return initializeRspOwnership.InitializeRsp.OwnedGames.OwnedGames_.ToList();
+                return rsp.InitializeRsp.OwnedGames.OwnedGames_.ToList();
             }
             else
             {
@@ -157,7 +152,7 @@ namespace UplayKit.Connection
 
         public string GetOwnershipToken(uint productId)
         {
-            Req ownershipTokenReq = new()
+            Req req = new()
             {
                 RequestId = ReqId,
                 OwnershipTokenReq = new()
@@ -166,11 +161,11 @@ namespace UplayKit.Connection
                 }
             };
             ReqId += 1;
-            var ownershipTokenRps = SendRequest(ownershipTokenReq);
-            if (ownershipTokenRps != null)
+            var rsp = SendRequest(req);
+            if (rsp != null)
             {
-                isServiceSuccess = ownershipTokenRps.OwnershipTokenRsp.Success;
-                return ownershipTokenRps.OwnershipTokenRsp.Token;
+                isServiceSuccess = rsp.OwnershipTokenRsp.Success;
+                return rsp.OwnershipTokenRsp.Token;
             }
             else
             {
@@ -179,33 +174,138 @@ namespace UplayKit.Connection
             }
         }
 
-        public string GetUplayPCTicket(uint productId)
+        public RegisterTemporaryOwnershipRsp? RegisterTempOwnershipToken(string token)
         {
-            Req ownershipTokenReq = new()
+            Req req = new()
+            {
+                RequestId = ReqId,
+                RegisterTemporaryOwnershipReq = new()
+                {
+                    Token = token
+                }
+            };
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = rsp.RegisterTemporaryOwnershipRsp.Success;
+                return rsp.RegisterTemporaryOwnershipRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
+            }
+        }
+
+        public ConsumeOwnershipRsp? ConsumeOwnership(uint productId, uint Quantity, string TransactionId, uint GameProductId, string Signature)
+        {
+            Req req = new()
+            {
+                RequestId = ReqId,
+                ConsumeOwnershipReq = new()
+                {
+                    ProductId = productId,
+                    Quantity = Quantity,
+                    TransactionId = TransactionId,
+                    GameProductId = GameProductId,
+                    Signature = Signature
+                }
+            };
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = (rsp.ConsumeOwnershipRsp.Result == ConsumeOwnershipRsp.Types.Result.Ok);
+                return rsp.ConsumeOwnershipRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
+            }
+        }
+
+        public UnlockProductBranchRsp? UnlockProductBranch(uint productId, string password)
+        {
+            Req req = new()
+            {
+                RequestId = ReqId,
+                UnlockProductBranchReq = new()
+                {
+                    Branch = new()
+                    {
+                        ProductId = productId,
+                        Password = password
+                    }
+                }
+            };
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = (rsp.UnlockProductBranchRsp.Result == UnlockProductBranchRsp.Types.Result.Success);
+                return rsp.UnlockProductBranchRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
+            }
+        }
+
+        public string GetUplayPCTicket(uint productId, GetUplayPCTicketReq.Types.Platform platform = GetUplayPCTicketReq.Types.Platform.Normal)
+        {
+            Req req = new()
             {
                 RequestId = ReqId,
                 GetUplayPcTicketReq = new()
                 {
-                    UplayId = productId
+                    UplayId = productId,
+                    Platform = platform
                 }
             };
             ReqId += 1;
-            var ownershipTokenRps = SendRequest(ownershipTokenReq);
-            if (ownershipTokenRps != null)
+            var rsp = SendRequest(req);
+            if (rsp != null)
             {
-                isServiceSuccess = ownershipTokenRps.GetUplayPcTicketRsp.Success;
-                return ownershipTokenRps.GetUplayPcTicketRsp.UplayPcTicket;
+                isServiceSuccess = rsp.GetUplayPcTicketRsp.Success;
+                return rsp.GetUplayPcTicketRsp.UplayPcTicket;
             }
             else
             {
                 isServiceSuccess = false;
                 return "";
+            }
+        }
+
+        public ClaimKeystorageKeyRsp? ClaimKeystorageKeys(List<uint> productIds)
+        {
+            Req req = new()
+            {
+                RequestId = ReqId,
+                ClaimKeystorageKeyReq = new()
+                {
+                    ProductIds = { productIds }
+                }
+            };
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = (rsp.ClaimKeystorageKeyRsp.Result == ClaimKeystorageKeyRsp.Types.Result.Success);
+                return rsp.ClaimKeystorageKeyRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
             }
         }
 
         public RegisterOwnershipRsp? RegisterOwnership(uint productId, string cdkey)
         {
-            Req ownershipTokenReq = new()
+            Req req = new()
             {
                 RequestId = ReqId,
                 RegisterOwnershipReq = new()
@@ -215,11 +315,11 @@ namespace UplayKit.Connection
                 }
             };
             ReqId += 1;
-            var ownershipTokenRps = SendRequest(ownershipTokenReq);
-            if (ownershipTokenRps != null)
+            var rsp = SendRequest(req);
+            if (rsp != null)
             {
-                isServiceSuccess = (ownershipTokenRps.RegisterOwnershipRsp.Result == RegisterOwnershipRsp.Types.Result.Success);
-                return ownershipTokenRps.RegisterOwnershipRsp;
+                isServiceSuccess = (rsp.RegisterOwnershipRsp.Result == RegisterOwnershipRsp.Types.Result.Success);
+                return rsp.RegisterOwnershipRsp;
             }
             else
             {
@@ -230,7 +330,7 @@ namespace UplayKit.Connection
 
         public string GetProductConfig(uint productId)
         {
-            Req appconfig = new()
+            Req req = new()
             {
                 RequestId = ReqId,
                 GetProductConfigReq = new()
@@ -240,11 +340,11 @@ namespace UplayKit.Connection
                 }
             };
             ReqId += 1;
-            var ownershipTokenRps = SendRequest(appconfig);
-            if (ownershipTokenRps != null)
+            var rsp = SendRequest(req);
+            if (rsp != null)
             {
-                isServiceSuccess = (ownershipTokenRps.GetProductConfigRsp.Result == GetProductConfigRsp.Types.Result.Success);
-                return ownershipTokenRps.GetProductConfigRsp.Configuration;
+                isServiceSuccess = (rsp.GetProductConfigRsp.Result == GetProductConfigRsp.Types.Result.Success);
+                return rsp.GetProductConfigRsp.Configuration;
             }
             else
             {

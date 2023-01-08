@@ -96,7 +96,7 @@ namespace UplayKit
                     {
                         // Thanks for SteamRE [TcpConnection.cs]
                         // waiting 1 ms and reading again
-                        if (network.Socket.Poll(100000, SelectMode.SelectRead))
+                        if (network.Socket.Poll(100000, SelectMode.SelectRead) && network.DataAvailable)
                         {
                             byte[] buffer = new byte[4];
                             sslStream.Read(buffer, 0, 4);
@@ -127,6 +127,10 @@ namespace UplayKit
                             if (downstream.Push.Data != null)
                             {
                                 NewMessage?.Invoke(this, new(downstream.Push.Data));
+                            }
+                            if (downstream.Response!.HasRequestId)
+                            {
+                                Console.WriteLine("Sadly we read the Response :(!");
                             }
                         }
                     }
@@ -196,10 +200,14 @@ namespace UplayKit
 
         #endregion
         #region Communicating with Current Demux
+        /// <summary>
+        /// Checking if the Current version is same as the Latest
+        /// </summary>
+        /// <returns>True or False</returns>
         public bool VersionCheck()
         {
             RequestId++;
-            var patchreq = new Req
+            Req patchreq = new()
             {
                 GetPatchInfoReq = new()
                 {
@@ -217,9 +225,12 @@ namespace UplayKit
             return false;
         }
 
+        /// <summary>
+        /// Initially pushing the Current version
+        /// </summary>
         public void PushVersion()
         {
-            var versionPush = new Push
+            Push versionPush = new()
             {
                 ClientVersion = new()
                 {
@@ -230,10 +241,15 @@ namespace UplayKit
             SendPush(versionPush);
         }
 
+        /// <summary>
+        /// Trying to Authenticate with UbiTicket
+        /// </summary>
+        /// <param name="token">Ubi Ticket</param>
+        /// <returns>True or False</returns>
         public bool Authenticate(string token)
         {
             RequestId++;
-            var authReq = new Req
+            Req authReq = new()
             {
                 RequestId = RequestId,
                 AuthenticateReq = new()
