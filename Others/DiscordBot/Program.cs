@@ -115,10 +115,25 @@ namespace DiscordBot
             );
 
             vCmd.Add(new SlashCommandBuilder()
+            .WithName("betasb64")
+            .WithDescription("Get the Betas.")
+            .AddOption("b64", ApplicationCommandOptionType.String, "Your b64 Stuff", true)
+            .Build()
+            );
+
+            vCmd.Add(new SlashCommandBuilder()
             .WithName("betaphases")
             .WithDescription("Get the Betas.")
             .AddOption("email", ApplicationCommandOptionType.String, "Your UBI Email", true)
             .AddOption("password", ApplicationCommandOptionType.String, "Your UBI Password", true)
+            .AddOption("betacode", ApplicationCommandOptionType.String, "Beta Code", true)
+            .Build()
+            );
+            
+            vCmd.Add(new SlashCommandBuilder()
+            .WithName("betaphasesb64")
+            .WithDescription("Get the Betas.")
+            .AddOption("b64", ApplicationCommandOptionType.String, "Your b64 Stuff", true)
             .AddOption("betacode", ApplicationCommandOptionType.String, "Beta Code", true)
             .Build()
             );
@@ -128,6 +143,15 @@ namespace DiscordBot
             .WithDescription("Get the Betas.")
             .AddOption("email", ApplicationCommandOptionType.String, "Your UBI Email", true)
             .AddOption("password", ApplicationCommandOptionType.String, "Your UBI Password", true)
+            .AddOption("betacode", ApplicationCommandOptionType.String, "Beta Code", true)
+            .AddOption("phaseid", ApplicationCommandOptionType.String, "Beta Phase Code", true)
+            .Build()
+            );
+            
+            vCmd.Add(new SlashCommandBuilder()
+            .WithName("betaphaseb64")
+            .WithDescription("Get the Betas.")
+            .AddOption("b64", ApplicationCommandOptionType.String, "Your b64 Stuff", true)
             .AddOption("betacode", ApplicationCommandOptionType.String, "Beta Code", true)
             .AddOption("phaseid", ApplicationCommandOptionType.String, "Beta Phase Code", true)
             .Build()
@@ -196,6 +220,20 @@ namespace DiscordBot
                     break;
                 case "betaphase":
                     File.WriteAllText("tmp.json", getbetaphase(cmd));
+                    await cmd.RespondWithFileAsync("tmp.json", "betas.json", "Your Betas here:", ephemeral: true);
+                    break;
+                case "betasb64":
+                    var betas64 = getbetasb64(cmd);
+                    File.WriteAllText("tmp.json", betas64);
+                    await cmd.RespondWithFileAsync("tmp.json", "betas.json", "Your Betas here:", ephemeral: true);
+                    break;
+                case "betaphasesb64":
+                    var betacode64 = getbetaphasesb64(cmd);
+                    File.WriteAllText("tmp.json", betacode64);
+                    await cmd.RespondWithFileAsync("tmp.json", "betas.json", "Your Betas here:", ephemeral: true);
+                    break;
+                case "betaphaseb64":
+                    File.WriteAllText("tmp.json", getbetaphaseb64(cmd));
                     await cmd.RespondWithFileAsync("tmp.json", "betas.json", "Your Betas here:", ephemeral: true);
                     break;
                 case "store":
@@ -289,6 +327,20 @@ namespace DiscordBot
                 return JsonConvert.SerializeObject(callback, Formatting.Indented);
             }
         }
+        
+        private string getbetasb64(SocketSlashCommand cmd)
+        {
+            var x = V3.LoginBase64((string)cmd.Data.Options.ToList()[0].Value);
+            var callback = Betas.GetBetas(x.Ticket);
+            if (callback == null)
+            {
+                return "";
+            }
+            else
+            {
+                return JsonConvert.SerializeObject(callback, Formatting.Indented);
+            }
+        }
 
         private string getbetaphases(SocketSlashCommand cmd)
         {
@@ -303,11 +355,39 @@ namespace DiscordBot
                 return JsonConvert.SerializeObject(callback, Formatting.Indented);
             }
         }
+        
+        private string getbetaphasesb64(SocketSlashCommand cmd)
+        {
+            var x = V3.LoginBase64((string)cmd.Data.Options.ToList()[0].Value);
+            var callback = Betas.GetBetasPhases(x.Ticket, (string)cmd.Data.Options.ToList()[1].Value);
+            if (callback == null)
+            {
+                return "";
+            }
+            else
+            {
+                return JsonConvert.SerializeObject(callback, Formatting.Indented);
+            }
+        }
 
         private string getbetaphase(SocketSlashCommand cmd)
         {
             var x = V3.Login((string)cmd.Data.Options.ToList()[0].Value, (string)cmd.Data.Options.ToList()[1].Value);
             var callback = Betas.GetBetasPhasePlayergroups(x.Ticket, (string)cmd.Data.Options.ToList()[2].Value, (string)cmd.Data.Options.ToList()[3].Value);
+            if (callback == null)
+            {
+                return "";
+            }
+            else
+            {
+                return JsonConvert.SerializeObject(callback, Formatting.Indented);
+            }
+        }
+        
+        private string getbetaphaseb64(SocketSlashCommand cmd)
+        {
+            var x = V3.LoginBase64((string)cmd.Data.Options.ToList()[0].Value);
+            var callback = Betas.GetBetasPhasePlayergroups(x.Ticket, (string)cmd.Data.Options.ToList()[1].Value, (string)cmd.Data.Options.ToList()[2].Value);
             if (callback == null)
             {
                 return "";

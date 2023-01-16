@@ -4,13 +4,13 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <SignAssembly>False</SignAssembly>
+    <SignAssembly>True</SignAssembly>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Uplay Protobufs</Title>
-    <PackageId>Uplay-$(AssemblyName)</PackageId>
+    <PackageId>$(AssemblyName)</PackageId>
     <Company>UplayDB</Company>
     <Authors>UplayDB,SlejmUr</Authors>
-    <Product>Uplay-$(AssemblyName)</Product>
+    <Product>$(AssemblyName)</Product>
     <Description>Uplay protobuf files in C#</Description>
     <Copyright>Copyright © UplayDB Team 2022</Copyright>
     <PackageProjectUrl>https://github.com/UplayDB/UplayKit</PackageProjectUrl>
@@ -20,8 +20,16 @@
     <PackageTags>uplay,ubisoft,protobuf</PackageTags>
     <Version>137.0.10799.0</Version>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <AssemblyOriginatorKeyFile>../Sign.snk</AssemblyOriginatorKeyFile>
+    <PackageReleaseNotes>Released</PackageReleaseNotes>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="changelog.txt">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+	
   <ItemGroup>
     <None Include="..\LICENSE">
       <Pack>True</Pack>
@@ -36,5 +44,4 @@
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.21.10" />
   </ItemGroup>
-
 </Project>

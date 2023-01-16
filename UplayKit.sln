@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32811.315
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Protobufs", "Protobufs\Protobufs.csproj", "{056E9B99-DE51-46F4-927C-897D8F87EF51}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Uplay-Protobufs", "Protobufs\Uplay-Protobufs.csproj", "{056E9B99-DE51-46F4-927C-897D8F87EF51}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UbiServices", "UbiServices\UbiServices.csproj", "{6AA3347E-8C8E-425D-81F0-2614F1AC5CCD}"
 EndProject

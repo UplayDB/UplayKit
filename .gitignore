@@ -364,3 +364,4 @@ FodyWeavers.xsd
 /Others/DiscordBot/token.txt
 /Others/DiscordBot/guild.txt
 /DoNotTrack
+*.snk

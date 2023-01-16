@@ -1,6 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
+using ICSharpCode.SharpZipLib.GZip;
+using Newtonsoft.Json;
 using System.ComponentModel;
+using System.IO.Compression;
+using System.Linq;
 using System.Text;
+using UbiServices.Public;
 using UbiServices.Records;
 using UplayKit;
 using UplayKit.Connection;
@@ -12,6 +18,7 @@ namespace TestApp
     {
         static void Main(string[] args)
         {
+            AppID = "6c6b8cd7-d901-4cd5-8279-07ba92088f06";
             Console.WriteLine(String.Join(",", args));
             Console.ReadLine();
             LoginJson? login;
@@ -56,7 +63,33 @@ namespace TestApp
             //var login = UbiServices.Public.V3.LoginBase64("");
             if (login != null)
             {
-                File.WriteAllText("login.txt", JsonConvert.SerializeObject(login));
+                var spaceId = "60859c37-949d-49e2-8fc8-6d8dc40f1a9e";
+                File.WriteAllText("login.json", JsonConvert.SerializeObject(login));
+
+                var appparam = V1.Applications.GetApplicationParameters(AppID);
+                File.WriteAllText("appparam.json", JsonConvert.SerializeObject(appparam));
+
+                var appconf = V1.Applications.GetApplicationConfig(AppID);
+                File.WriteAllText("appconf.json", JsonConvert.SerializeObject(appconf));
+
+                var items = V1.Spaces.GetSpaceAllItems(spaceId, login.Ticket);
+                File.WriteAllText("items_pre.json", JsonConvert.SerializeObject(items));
+
+                File.WriteAllText("spaceparam.json", JsonConvert.SerializeObject(V1.Spaces.GetSpaceParameters(spaceId)));
+
+                var compressedItems = items["compressedItems"];
+
+                var b64com = (string)compressedItems;
+
+                var bs = ByteString.FromBase64(b64com);
+
+                File.WriteAllBytes("items_pre",bs.ToArray());
+                var decpm = Decompress(bs.ToArray());
+                
+                var itemsjson = Encoding.UTF8.GetString(decpm.ToArray());
+                var des = JsonConvert.DeserializeObject(itemsjson);
+                var ser = JsonConvert.SerializeObject(des, Formatting.Indented);
+                File.WriteAllText("items_out.json", ser);
                 /*
                 login = LoginRememberDevice(login.RememberMeTicket, "ewogICJ0eXAiOiAiSldFIiwKICAiZW5jIjogIkExMjhDQkMiLAogICJpdiI6ICJvTE9XVjdEZGE0UzBMdEV4U3dvU09RIiwKICAiemlwIjogIkRFRiIsCiAgImludCI6ICJIUzI1NiIsCiAgImtpZCI6ICIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiCn0.gQyjnyrYCxHEl21zjvMOJtOwPjp70JHXqCIblGETQlTWblPF0AtC3EKS4zEJu6fsXcUXV0-6ogkMc8pYsdSrqCn3wei4huShJvzaZ7d49Iz9dPRV9n9IoE9aud0BGQIdaIFogDKxlyyW3vwS7LxFOXRaGtfrYNTtbj7Z8S_0hxuVO0LLOAkr9CBBGjFSlax87T64s9piqhG058yeG28-RHUEeAiB4wWpBigByupsm0dhOViPL_6o4Jg9efng6QxHXj8A4H1s0I-REFgwzBGl8Av2peSvKJ2PStEaGHAXAWU8zGDZG6STewuIPtAHBTFp.m_hZGY8H94Diq9fwJ6TsZ3KSNoRX4Y67bh0Efs4gfUw");
                 File.WriteAllText("login_rem.txt", JsonConvert.SerializeObject(login));
@@ -73,6 +106,7 @@ namespace TestApp
                 }
                 File.WriteAllText("login_2fa.txt", JsonConvert.SerializeObject(login));
                 */
+                /*
                 Debug.isDebug = true;
                 DemuxSocket socket = new();
                 socket.StopTheCheck = true;
@@ -93,7 +127,7 @@ namespace TestApp
                 Console.WriteLine("end?");
                 Console.ReadLine();
                 Console.WriteLine();
-                socket.Close();
+                socket.Close();*/
             }
 
             /*
@@ -133,7 +167,16 @@ namespace TestApp
         }
 
 
-
+        static byte[] Decompress(byte[] data)
+        {
+            using (var compressedStream = new MemoryStream(data))
+            using (var zipStream = new GZipStream(compressedStream, CompressionMode.Decompress))
+            using (var resultStream = new MemoryStream())
+            {
+                zipStream.CopyTo(resultStream);
+                return resultStream.ToArray();
+            }
+        }
         private static void Ownership_PushEvent(object? sender, Uplay.Ownership.Push e)
         {
             Console.WriteLine(e.ToString());

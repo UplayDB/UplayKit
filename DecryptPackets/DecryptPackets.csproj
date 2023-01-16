@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Protobufs\Protobufs.csproj" />
+    <ProjectReference Include="..\Protobufs\Uplay-Protobufs.csproj" />
   </ItemGroup>
 
 </Project>
