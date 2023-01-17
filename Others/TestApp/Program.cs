@@ -18,7 +18,7 @@ namespace TestApp
     {
         static void Main(string[] args)
         {
-            AppID = "6c6b8cd7-d901-4cd5-8279-07ba92088f06";
+            //AppID = "6c6b8cd7-d901-4cd5-8279-07ba92088f06";
             Console.WriteLine(String.Join(",", args));
             Console.ReadLine();
             LoginJson? login;
@@ -43,7 +43,7 @@ namespace TestApp
                 login = Login(username, password);
             }
 
-            if (login.Ticket == null)
+            if (login != null && login.Ticket == null)
             {
                 Console.WriteLine("Your account has 2FA, please enter your code:");
                 var code2fa = Console.ReadLine();
@@ -63,7 +63,47 @@ namespace TestApp
             //var login = UbiServices.Public.V3.LoginBase64("");
             if (login != null)
             {
-                var spaceId = "60859c37-949d-49e2-8fc8-6d8dc40f1a9e";
+
+                Debug.isDebug = true;
+                DemuxSocket socket = new();
+                socket.StopTheCheck = true;
+                socket.VersionCheck();
+
+                socket.PushVersion();
+
+                socket.Authenticate(login.Ticket);
+                OwnershipConnection ownership = new(socket);
+                var games = ownership.GetOwnedGames(true);
+                ownership.PushEvent += Ownership_PushEvent;
+
+                var cdkey = Console.ReadLine();
+
+                Console.WriteLine(ownership.RegisterOwnershipByCdKey(cdkey));
+
+                Console.WriteLine(ownership.DeprecatedGetProductFromCdKey(cdkey));
+
+                Console.WriteLine("end?");
+                Console.ReadLine();
+                Console.WriteLine();
+                socket.Close();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                /*
+                var spaceId = "1ee4f5d4-3a0b-4e55-ad3d-b398e014c02a";
                 File.WriteAllText("login.json", JsonConvert.SerializeObject(login));
 
                 var appparam = V1.Applications.GetApplicationParameters(AppID);
@@ -107,27 +147,8 @@ namespace TestApp
                 File.WriteAllText("login_2fa.txt", JsonConvert.SerializeObject(login));
                 */
                 /*
-                Debug.isDebug = true;
-                DemuxSocket socket = new();
-                socket.StopTheCheck = true;
-                socket.VersionCheck();
 
-                socket.PushVersion();
-
-                socket.Authenticate(login.Ticket);
-                OwnershipConnection ownership = new(socket);
-                var games = ownership.GetOwnedGames(true);
-                ownership.PushEvent += Ownership_PushEvent;
-                StoreConnection storeConnection = new(socket);
-
-                storeConnection.Init();
-                storeConnection.GetStore();
-
-
-                Console.WriteLine("end?");
-                Console.ReadLine();
-                Console.WriteLine();
-                socket.Close();*/
+                */
             }
 
             /*

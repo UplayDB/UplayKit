@@ -17,7 +17,7 @@ namespace UbiServices.Records
             [property: JsonProperty("clientIp", NullValueHandling = NullValueHandling.Ignore)] string ClientIp,
             [property: JsonProperty("clientIpCountry", NullValueHandling = NullValueHandling.Ignore)] string ClientIpCountry,
             [property: JsonProperty("serverTime", NullValueHandling = NullValueHandling.Ignore)] DateTime? ServerTime,
-            [property: JsonProperty("sessionId", NullValueHandling = NullValueHandling.Ignore)] string SessionId,
+            [property: JsonProperty("sessionId")] string SessionId = "",
             [property: JsonProperty("sessionKey", NullValueHandling = NullValueHandling.Ignore)] string SessionKey,
             [property: JsonProperty("rememberMeTicket", NullValueHandling = NullValueHandling.Ignore)] string RememberMeTicket,
             [property: JsonProperty("rememberDeviceTicket", NullValueHandling = NullValueHandling.Ignore)] string RememberDeviceTicket
@@ -330,5 +330,24 @@ namespace UbiServices.Records
         [property: JsonProperty("PlayerSystemFields", NullValueHandling = NullValueHandling.Ignore)] IReadOnlyList<PlayerSystemField> PlayerSystemFields
     );
     #endregion
+
+    public class RemMe
+    {
+        [JsonProperty("RememberMe", NullValueHandling = NullValueHandling.Ignore)]
+        public bool RememberMe;
+
+        [JsonProperty("TrustedDevice", NullValueHandling = NullValueHandling.Ignore)]
+        public trustedDevice TrustedDevice;
+
+        public class trustedDevice
+        {
+            [JsonProperty("FriendlyName", NullValueHandling = NullValueHandling.Ignore)]
+            public string FriendlyName;
+
+            [JsonProperty("Id", NullValueHandling = NullValueHandling.Ignore)]
+            public string Id;
+        }
+    }
+
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 }

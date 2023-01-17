@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using RestSharp;
+﻿using DalSoft.RestClient;
 using System.Text;
 using UbiServices.Records;
 
@@ -10,7 +9,22 @@ namespace UbiServices.Public
         public static string AppID = "f68a4bb5-608a-4ff2-8123-be8ef797e0a6";
         public static string UserAgent = "Massgate";
         public static readonly string URL_Session = Urls.GetUrl("v3/profiles/sessions");
+        static RemMe rem = new RemMe { RememberMe = true };
 
+        internal static LoginJson? DoLogin(Dictionary<string, string> headers, RemMe remMe)
+        {
+            var client = new RestClient(URL_Session, headers);
+            var posted = client.Post<RemMe, LoginJson>(remMe);
+            posted.Wait();
+
+            if (posted.Result.SessionId == "")
+            {
+                return null;
+            }
+
+            return posted.Result;
+
+        }
         /// <summary>
         /// Login via Email and Password
         /// </summary>
@@ -32,29 +46,14 @@ namespace UbiServices.Public
         /// <returns>LoginJson or Null</returns>
         public static LoginJson? LoginBase64(string b64)
         {
-            var client = new RestClient(URL_Session);
-            var request = new RestRequest();
-
-            request.AddHeader("Authorization", $"Basic {b64}");
-            request.AddHeader("User-Agent", UserAgent);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Ubi-RequestedPlatformType", "uplay");
-            request.AddHeader("Ubi-AppId", AppID);
-            var rem = new
-            {
-                rememberMe = true
-            };
-            request.AddJsonBody(rem);
-
-            RestResponse response = client.PostAsync(request).Result;
-
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JsonConvert.DeserializeObject<LoginJson>(response.Content);
-            }
-
-            return null;
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"Basic {b64}");
+            headers.Add("User-Agent", UserAgent);
+            headers.Add("Ubi-AppId", AppID);
+            headers.Add("Content-Type", "application/json");
+            headers.Add("Ubi-RequestedPlatformType", "uplay");
+            
+            return DoLogin(headers,rem);
         }
 
         /// <summary>
@@ -65,31 +64,18 @@ namespace UbiServices.Public
         /// <returns>LoginJson or Null</returns>
         public static LoginJson? Login2FA(string tfaTicket, string tfaCode)
         {
-            var client = new RestClient(URL_Session);
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"ubi_2fa_v1 t={tfaTicket}");
+            headers.Add("User-Agent", UserAgent); 
+            headers.Add("Ubi-AppId", AppID);
+            headers.Add("Ubi-2FACode", tfaCode);
+            headers.Add("Content-Type", "application/json");
+            headers.Add("Ubi-RequestedPlatformType", "uplay");
 
-            request.AddHeader("Authorization", $"ubi_2fa_v1 t={tfaTicket}");
-            request.AddHeader("Ubi-2FACode", tfaCode);
-            request.AddHeader("User-Agent", UserAgent);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Ubi-RequestedPlatformType", "uplay");
-            request.AddHeader("Ubi-AppId", AppID);
-            var rem = new
-            {
-                rememberMe = true
-            };
-            request.AddJsonBody(rem);
+            return DoLogin(headers, rem);
 
-            RestResponse response = client.PostAsync(request).Result;
-
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JsonConvert.DeserializeObject<LoginJson>(response.Content);
-            }
-
-            return null;
         }
+
 
         /// <summary>
         /// Login via 2FA ticket and Code Plus Remember Device stuff
@@ -101,35 +87,17 @@ namespace UbiServices.Public
         /// <returns></returns>
         public static LoginJson? Login2FA_Device(string tfaTicket, string tfaCode, string trustedId, string TrustedName)
         {
-            var client = new RestClient(URL_Session);
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"ubi_2fa_v1 t={tfaTicket}");
+            headers.Add("Ubi-2FACode", tfaCode);
+            headers.Add("User-Agent", UserAgent);
+            headers.Add("Content-Type", "application/json");
+            headers.Add("Ubi-RequestedPlatformType", "uplay");
+            headers.Add("Ubi-AppId", AppID);
 
-            request.AddHeader("Authorization", $"ubi_2fa_v1 t={tfaTicket}");
-            request.AddHeader("Ubi-2FACode", tfaCode);
-            request.AddHeader("User-Agent", UserAgent);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Ubi-RequestedPlatformType", "uplay");
-            request.AddHeader("Ubi-AppId", AppID);
-            var rem = new
-            {
-                rememberMe = true,
-                trustedDevice = new
-                {
-                    friendlyName = TrustedName,
-                    id = trustedId
-                }
-            };
-            request.AddJsonBody(rem);
+            var rem = new RemMe() { RememberMe = true, TrustedDevice = new() { FriendlyName = TrustedName, Id = trustedId } };
 
-            RestResponse response = client.PostAsync(request).Result;
-
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JsonConvert.DeserializeObject<LoginJson>(response.Content);
-            }
-
-            return null;
+            return DoLogin(headers, rem);
         }
 
         /// <summary>
@@ -139,29 +107,14 @@ namespace UbiServices.Public
         /// <returns>LoginJson or Null</returns>
         public static LoginJson? LoginRemember(string rememberTicket)
         {
-            var client = new RestClient(URL_Session);
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"rm_v1 t={rememberTicket}");
+            headers.Add("User-Agent", UserAgent);
+            headers.Add("Content-Type", "application/json");
+            headers.Add("Ubi-RequestedPlatformType", "uplay");
+            headers.Add("Ubi-AppId", AppID);
 
-            request.AddHeader("Authorization", $"rm_v1 t={rememberTicket}");
-            request.AddHeader("User-Agent", UserAgent);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Ubi-RequestedPlatformType", "uplay");
-            request.AddHeader("Ubi-AppId", AppID);
-            var rem = new
-            {
-                rememberMe = true
-            };
-            request.AddJsonBody(rem);
-
-            RestResponse response = client.PostAsync(request).Result;
-
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JsonConvert.DeserializeObject<LoginJson>(response.Content);
-            }
-
-            return null;
+            return DoLogin(headers, rem);
         }
 
         /// <summary>
@@ -172,30 +125,15 @@ namespace UbiServices.Public
         /// <returns></returns>
         public static LoginJson? LoginRenew(string ticket, string session)
         {
-            var client = new RestClient(URL_Session);
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"Ubi_v1 t={ticket}");
+            headers.Add("User-Agent", UserAgent);
+            headers.Add("Content-Type", "application/json");
+            headers.Add("Ubi-RequestedPlatformType", "uplay");
+            headers.Add("Ubi-AppId", AppID);
+            headers.Add("Ubi-SessionId", session);
 
-            request.AddHeader("Authorization", $"Ubi_v1 t={ticket}");
-            request.AddHeader("User-Agent", UserAgent);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Ubi-RequestedPlatformType", "uplay");
-            request.AddHeader("Ubi-AppId", AppID);
-            request.AddHeader("Ubi-SessionId", session);
-            var rem = new
-            {
-                rememberMe = true
-            };
-            request.AddJsonBody(rem);
-
-            RestResponse response = client.PostAsync(request).Result;
-
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JsonConvert.DeserializeObject<LoginJson>(response.Content);
-            }
-
-            return null;
+            return DoLogin(headers, rem);
         }
 
         /// <summary>
@@ -206,30 +144,15 @@ namespace UbiServices.Public
         /// <returns>LoginJson or Null</returns>
         public static LoginJson? LoginRememberDevice(string rememberTicket, string rememberDeviceTicket)
         {
-            var client = new RestClient(URL_Session);
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"rm_v1 t={rememberTicket}");
+            headers.Add("User-Agent", UserAgent);
+            headers.Add("Content-Type", "application/json");
+            headers.Add("Ubi-RequestedPlatformType", "uplay");
+            headers.Add("Ubi-AppId", AppID);
+            headers.Add("Ubi-RememberDeviceTicket", rememberDeviceTicket);
 
-            request.AddHeader("Authorization", $"rm_v1 t={rememberTicket}");
-            request.AddHeader("User-Agent", UserAgent);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Ubi-RequestedPlatformType", "uplay");
-            request.AddHeader("Ubi-AppId", AppID);
-            request.AddHeader("Ubi-RememberDeviceTicket", rememberDeviceTicket);
-            var rem = new
-            {
-                rememberMe = true
-            };
-            request.AddJsonBody(rem);
-
-            RestResponse response = client.PostAsync(request).Result;
-
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JsonConvert.DeserializeObject<LoginJson>(response.Content);
-            }
-
-            return null;
+            return DoLogin(headers, rem);
         }
     }
 }

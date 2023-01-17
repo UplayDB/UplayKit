@@ -328,6 +328,54 @@ namespace UplayKit.Connection
             }
         }
 
+        public RegisterOwnershipRsp? RegisterOwnershipByCdKey(string cdkey)
+        {
+            Req req = new()
+            {
+                RequestId = ReqId,
+                RegisterOwnershipByCdKeyReq = new()
+                {
+                    CdKey = cdkey
+                }
+            };
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = (rsp.RegisterOwnershipRsp.Result == RegisterOwnershipRsp.Types.Result.Success);
+                return rsp.RegisterOwnershipRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
+            }
+        }
+
+        public DeprecatedGetProductFromCdKeyRsp? DeprecatedGetProductFromCdKey(string cdkey)
+        {
+            Req req = new()
+            {
+                RequestId = ReqId,
+                DeprecatedGetProductFromCdKeyReq = new()
+                {
+                    CdKey = cdkey
+                }
+            };
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = (rsp.DeprecatedGetProductFromCdKeyRsp.Result == DeprecatedGetProductFromCdKeyRsp.Types.Result.Success);
+                return rsp.DeprecatedGetProductFromCdKeyRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
+            }
+        }
+
         public string GetProductConfig(uint productId)
         {
             Req req = new()
