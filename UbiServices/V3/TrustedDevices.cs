@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json.Linq;
-using RestSharp;
+﻿using DalSoft.RestClient;
+using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using UbiServices.Records;
 
 namespace UbiServices.Public
 {
@@ -18,20 +19,19 @@ namespace UbiServices.Public
         /// <returns>JObject or Null</returns>
         public static JObject? GetTrustedDevices(string token, string sessionId)
         {
-            var client = new RestClient(URL_Devices);
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"Ubi_v1 t={token}");
+            headers.Add("Ubi-AppId", AppID);
+            headers.Add("Ubi-SessionId", sessionId);
 
-            request.AddHeader("Ubi-AppId", AppID);
-            request.AddHeader("Authorization", "Ubi_v1 t=" + token);
-            request.AddHeader("Ubi-SessionId", sessionId);
+            var client = new RestClient(URL_Devices, headers);
+            var posted = client.Get<JObject>();
+            posted.Wait();
 
-            RestResponse response = client.GetAsync(request).Result;
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JObject.Parse(response.Content);
-            }
-            return null;
+            if (posted.Result.HasValues == false)
+                return null;
+
+            return posted.Result;
         }
 
         /// <summary>
@@ -44,24 +44,24 @@ namespace UbiServices.Public
         /// <returns>JObject or Null</returns>
         public static JObject? UpdateTrustedDevices(string token, string sessionId, string deviceId, string DeviceName)
         {
-            var client = new RestClient(URL_Devices + $"/{deviceId}");
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"Ubi_v1 t={token}");
+            headers.Add("Ubi-AppId", AppID);
+            headers.Add("Ubi-SessionId", sessionId);
 
-            request.AddHeader("Ubi-AppId", AppID);
-            request.AddHeader("Authorization", "Ubi_v1 t=" + token);
-            request.AddHeader("Ubi-SessionId", sessionId);
-            var rem = new
+            var client = new RestClient($"{URL_Devices}/{deviceId}", headers);
+            var trustedDevice = new RemMe.trustedDevice
             {
-                friendlyName = DeviceName
+                FriendlyName = DeviceName
             };
-            request.AddJsonBody(rem);
-            RestResponse response = client.PutAsync(request).Result;
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return JObject.Parse(response.Content);
-            }
-            return null;
+
+            var posted = client.Put<RemMe.trustedDevice, JObject>(trustedDevice);
+            posted.Wait();
+
+            if (posted.Result.HasValues == false)
+                return null;
+
+            return posted.Result;
         }
 
         /// <summary>
@@ -73,20 +73,18 @@ namespace UbiServices.Public
         /// <returns>StatusCode or Null</returns>
         public static HttpStatusCode? DeleteTrustedDevices(string token, string sessionId, string deviceId)
         {
-            var client = new RestClient(URL_Devices + $"/{deviceId}");
-            var request = new RestRequest();
+            Dictionary<string, string> headers = new();
+            headers.Add("Authorization", $"Ubi_v1 t={token}");
+            headers.Add("Ubi-AppId", AppID);
+            headers.Add("Ubi-SessionId", sessionId);
 
-            request.AddHeader("Ubi-AppId", AppID);
-            request.AddHeader("Authorization", "Ubi_v1 t=" + token);
-            request.AddHeader("Ubi-SessionId", sessionId);
+            var client = new RestClient($"{URL_Devices}/{deviceId}", headers);
+            var posted = client.Delete<HttpResponseMessage>(); //should work
+            posted.Wait();
+            if (posted.Result.IsSuccessStatusCode == false)
+                return null;
 
-            RestResponse response = client.DeleteAsync(request).Result;
-            if (response.Content != null)
-            {
-                Console.WriteLine(response.StatusCode);
-                return response.StatusCode;
-            }
-            return null;
+            return posted.Result.StatusCode;
         }
 
         /// <summary>

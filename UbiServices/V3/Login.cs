@@ -18,9 +18,7 @@ namespace UbiServices.Public
             posted.Wait();
 
             if (posted.Result.SessionId == "")
-            {
                 return null;
-            }
 
             return posted.Result;
 
@@ -52,8 +50,8 @@ namespace UbiServices.Public
             headers.Add("Ubi-AppId", AppID);
             headers.Add("Content-Type", "application/json");
             headers.Add("Ubi-RequestedPlatformType", "uplay");
-            
-            return DoLogin(headers,rem);
+
+            return DoLogin(headers, rem);
         }
 
         /// <summary>
@@ -66,7 +64,7 @@ namespace UbiServices.Public
         {
             Dictionary<string, string> headers = new();
             headers.Add("Authorization", $"ubi_2fa_v1 t={tfaTicket}");
-            headers.Add("User-Agent", UserAgent); 
+            headers.Add("User-Agent", UserAgent);
             headers.Add("Ubi-AppId", AppID);
             headers.Add("Ubi-2FACode", tfaCode);
             headers.Add("Content-Type", "application/json");
