@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
-using RestSharp;
+using DalSoft.RestClient;
 
 namespace UbiServices.Store
 {
@@ -52,21 +52,14 @@ namespace UbiServices.Store
                 URL += "&expand=" + expandswithcommas;
             }
 
-            //Console.WriteLine(URL);
             var client = new RestClient(URL);
-            var request = new RestRequest();
+            var posted = client.Get<JObject>();
+            posted.Wait();
 
-            try
-            {
-                RestResponse response = client.Get(request);
-                if (response.Content != null)
-                {
-                    return JObject.Parse(response.Content);
-                }
-            }
-            catch { }
+            if (posted.Result.HasValues == false)
+                return null;
 
-            return null;
+            return posted.Result;
         }
     }
 }

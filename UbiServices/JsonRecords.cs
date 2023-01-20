@@ -17,10 +17,10 @@ namespace UbiServices.Records
             [property: JsonProperty("clientIp", NullValueHandling = NullValueHandling.Ignore)] string ClientIp,
             [property: JsonProperty("clientIpCountry", NullValueHandling = NullValueHandling.Ignore)] string ClientIpCountry,
             [property: JsonProperty("serverTime", NullValueHandling = NullValueHandling.Ignore)] DateTime? ServerTime,
-            [property: JsonProperty("sessionId")] string SessionId = "",
             [property: JsonProperty("sessionKey", NullValueHandling = NullValueHandling.Ignore)] string SessionKey,
             [property: JsonProperty("rememberMeTicket", NullValueHandling = NullValueHandling.Ignore)] string RememberMeTicket,
-            [property: JsonProperty("rememberDeviceTicket", NullValueHandling = NullValueHandling.Ignore)] string RememberDeviceTicket
+            [property: JsonProperty("rememberDeviceTicket", NullValueHandling = NullValueHandling.Ignore)] string RememberDeviceTicket,
+            [property: JsonProperty("sessionId")] string SessionId = ""
     );
     #endregion
     #region UsersMe

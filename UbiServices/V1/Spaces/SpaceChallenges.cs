@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
-using RestSharp;
+using DalSoft.RestClient;
 
 namespace UbiServices.Public
 {
@@ -19,16 +19,17 @@ namespace UbiServices.Public
 
                 string URL = $"{URL_V1Spaces}{SpaceId}/challenges";
 
-                var client = new RestClient(URL);
-                var request = new RestRequest();
+                Dictionary<string, string> headers = new();
+                headers.Add("Ubi-AppId", V3.AppID);
 
-                request.AddHeader("Ubi-AppId", V3.AppID);
-                RestResponse response = client.GetAsync(request).Result;
-                if (response.Content != null)
-                {
-                    return JObject.Parse(response.Content);
-                }
-                return null;
+                var client = new RestClient(URL, headers);
+                var posted = client.Get<JObject>();
+                posted.Wait();
+
+                if (posted.Result.HasValues == false)
+                    return null;
+
+                return posted.Result;
             }
         }
     }
