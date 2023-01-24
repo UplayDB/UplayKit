@@ -18,8 +18,8 @@
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	<PackageReleaseNotes>Released for Internal/Initial Testing</PackageReleaseNotes>
 	<SignAssembly>True</SignAssembly>
-	<AssemblyOriginatorKeyFile>G:\VS\UplayDB\Sign.snk</AssemblyOriginatorKeyFile>
-	<Version>0.0.0.1</Version>
+	<AssemblyOriginatorKeyFile>../../Sign.snk</AssemblyOriginatorKeyFile>
+	<Version>0.0.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>

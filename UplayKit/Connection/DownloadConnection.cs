@@ -199,6 +199,7 @@ namespace UplayKit.Connection
             var downloadUrls = SendRequest(urlReq);
             if (downloadUrls != null)
             {
+                isServiceSuccess = (UrlRsp.Types.Result.Success == downloadUrls.UrlRsp.UrlResponses[0].Result);
                 return downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.ToList().Select(a => a.Urls[0]).ToList();
             }
             else

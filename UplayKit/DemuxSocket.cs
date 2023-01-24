@@ -45,25 +45,35 @@ namespace UplayKit
         #region Basic
         public DemuxSocket(bool UseLocal = false)
         {
-            if (UseLocal)
+            try
             {
-                ConnectionHost = "dmx.local.upc.ubisoft.com";
-                ConnectionPort = 6000;
+                if (UseLocal)
+                {
+                    ConnectionHost = "dmx.local.upc.ubisoft.com";
+                    ConnectionPort = 6000;
+                }
+                tcpClient = new TcpClient();
+                tcpClient.Connect(ConnectionHost, ConnectionPort);
+                sslStream = new SslStream(tcpClient.GetStream());
+                SslClientAuthenticationOptions sslClientAuthenticationOptions = new()
+                {
+                    TargetHost = ConnectionHost
+                };
+                sslStream.AuthenticateAsClient(sslClientAuthenticationOptions);
+                RequestId = 1;
+                network = tcpClient.GetStream();
+                new Thread(TDataCheck).Start();
+                NewMessage += DemuxSocket_NewMessage;
+                Debug.PWDebug("[DemuxSocket] Started.");
             }
-            tcpClient = new TcpClient();
-            tcpClient.Connect(ConnectionHost, ConnectionPort);
-            sslStream = new SslStream(tcpClient.GetStream());
-            SslClientAuthenticationOptions sslClientAuthenticationOptions = new()
-            {
-                TargetHost = ConnectionHost
-            };
-            sslStream.AuthenticateAsClient(sslClientAuthenticationOptions);
-            RequestId = 1;
-            network = tcpClient.GetStream();
-            new Thread(TDataCheck).Start();
-            NewMessage += DemuxSocket_NewMessage;
-            Debug.PWDebug("[DemuxSocket] Started.");
+            catch (Exception ex)
+            { 
+                InternalEx.WriteEx(ex);
+                Console.WriteLine("Connection to demux has been failed!");
+            }
+
         }
+
         /// <summary>
         /// Closing the Connection safely
         /// </summary>
@@ -135,7 +145,7 @@ namespace UplayKit
                         }
                     }
                 }
-                catch (Exception ex) { Debug.WriteDebug(ex.ToString(), "EX.txt"); }
+                catch (Exception ex) { InternalEx.WriteEx(ex); }
             }
 
         }
@@ -280,60 +290,68 @@ namespace UplayKit
         /// <exception cref="Exception">If the Response Length from Response is 0</exception>
         public Rsp? SendReq(Req req)
         {
-            Upstream post = new() { Request = req };
-
-            byte[] buffer = new byte[4];
-            uint responseLength;
-            sslStream.Write(Formatters.FormatUpstream(post.ToByteArray()));
-            Debug.WriteDebug(post.ToString(), "DemuxReq.txt");
-            PauseRead = true;
-            while (true)
+            try
             {
-                if (network.DataAvailable)
+                Upstream post = new() { Request = req };
+
+                byte[] buffer = new byte[4];
+                uint responseLength;
+                sslStream.Write(Formatters.FormatUpstream(post.ToByteArray()));
+                Debug.WriteDebug(post.ToString(), "DemuxReq.txt");
+                PauseRead = true;
+                while (true)
                 {
-                    sslStream.Read(buffer, 0, 4);
-                    responseLength = Formatters.FormatLength(BitConverter.ToUInt32(buffer, 0));
-                    Debug.PWDebug("[SendReq] Response Length: " + responseLength);
-                    if (responseLength == 0) { throw new Exception("Response Length from Demux is 0, something is not right"); }
-                    if (responseLength > 0)
+                    if (network.DataAvailable)
                     {
-                        buffer = new byte[responseLength];
-                        sslStream.Read(buffer, 0, (int)responseLength);
-                        break;
+                        sslStream.Read(buffer, 0, 4);
+                        responseLength = Formatters.FormatLength(BitConverter.ToUInt32(buffer, 0));
+                        Debug.PWDebug("[SendReq] Response Length: " + responseLength);
+                        if (responseLength == 0) { throw new Exception("Response Length from Demux is 0, something is not right"); }
+                        if (responseLength > 0)
+                        {
+                            buffer = new byte[responseLength];
+                            sslStream.Read(buffer, 0, (int)responseLength);
+                            break;
+                        }
                     }
                 }
-            }
-            PauseRead = false;
-            Debug.PWDebug("[SendReq] Final Response Length: " + responseLength);
-            //Fail save!
-            if (responseLength == 0)
-            {
-                Debug.PWDebug("RSP 0???");
+                PauseRead = false;
+                Debug.PWDebug("[SendReq] Final Response Length: " + responseLength);
+                //Fail save!
+                if (responseLength == 0)
+                {
+                    Debug.PWDebug("RSP 0???");
+                    return null;
+                }
+
+
+                var downstream = Formatters.FormatDataNoLength<Downstream>(buffer);
+                Debug.WriteDebug(downstream.ToString(), "SendReq.txt");
+                if (downstream?.Push != null)
+                {
+                    Debug.WriteDebug(downstream.Push.ToString(), "DemuxPush.txt");
+                    if (downstream.Push.ClientOutdated != null)
+                    {
+                        Console.WriteLine("Your Client is Outdated!");
+                        TerminateConnection(0);
+                    }
+                    if (downstream.Push.ConnectionClosed != null)
+                    {
+                        TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
+                    }
+                }
+                if (downstream?.Response != null)
+                {
+                    Debug.WriteDebug(downstream.Response.ToString(), "DemuxRsp.txt");
+                    return downstream.Response;
+                }
                 return null;
             }
-
-
-            var downstream = Formatters.FormatDataNoLength<Downstream>(buffer);
-            Debug.WriteDebug(downstream.ToString(), "SendReq.txt");
-            if (downstream?.Push != null)
+            catch (Exception ex)
             {
-                Debug.WriteDebug(downstream.Push.ToString(), "DemuxPush.txt");
-                if (downstream.Push.ClientOutdated != null)
-                {
-                    Console.WriteLine("Your Client is Outdated!");
-                    TerminateConnection(0);
-                }
-                if (downstream.Push.ConnectionClosed != null)
-                {
-                    TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
-                }
+                InternalEx.WriteEx(ex);
+                return null;
             }
-            if (downstream?.Response != null)
-            {
-                Debug.WriteDebug(downstream.Response.ToString(), "DemuxRsp.txt");
-                return downstream.Response;
-            }
-            return null;
         }
 
         /// <summary>
@@ -344,48 +362,56 @@ namespace UplayKit
         /// <exception cref="Exception">If the Response Length from Response is 0</exception>
         public Downstream? SendUpstream(Upstream upstream)
         {
-            byte[] buffer = new byte[4];
-            uint responseLength;
-            sslStream.Write(Formatters.FormatUpstream(upstream.ToByteArray()));
-            Debug.WriteDebug(upstream.ToString(), "DemuxUp.txt");
-            PauseRead = true;
-            while (true)
+            try
             {
-                sslStream.Read(buffer, 0, 4);
-                responseLength = Formatters.FormatLength(BitConverter.ToUInt32(buffer, 0));
-                Debug.PWDebug("[SendUpstream] Response Length: " + responseLength);
-                if (responseLength == 0) { throw new Exception("Response Length from Demux is 0, something is not right"); }
-                if (responseLength > 0)
+                byte[] buffer = new byte[4];
+                uint responseLength;
+                sslStream.Write(Formatters.FormatUpstream(upstream.ToByteArray()));
+                Debug.WriteDebug(upstream.ToString(), "DemuxUp.txt");
+                PauseRead = true;
+                while (true)
                 {
-                    buffer = new byte[responseLength];
-                    for (int i = 0; i < responseLength; i++)
+                    sslStream.Read(buffer, 0, 4);
+                    responseLength = Formatters.FormatLength(BitConverter.ToUInt32(buffer, 0));
+                    Debug.PWDebug("[SendUpstream] Response Length: " + responseLength);
+                    if (responseLength == 0) { throw new Exception("Response Length from Demux is 0, something is not right"); }
+                    if (responseLength > 0)
                     {
-                        sslStream.Read(buffer, i, 1);
+                        buffer = new byte[responseLength];
+                        for (int i = 0; i < responseLength; i++)
+                        {
+                            sslStream.Read(buffer, i, 1);
+                        }
+                        break;
                     }
-                    break;
                 }
-            }
-            PauseRead = false;
-            sslStream.Flush();
-            Debug.PWDebug("[SendUpstream] Final Response Length: " + responseLength);
-            //Fail save!
-            if (responseLength == 0)
-                return null;
+                PauseRead = false;
+                sslStream.Flush();
+                Debug.PWDebug("[SendUpstream] Final Response Length: " + responseLength);
+                //Fail save!
+                if (responseLength == 0)
+                    return null;
 
-            var downstream = Formatters.FormatDataNoLength<Downstream>(buffer);
-            Debug.WriteDebug(downstream.ToString(), "DemuxDown.txt");
-            if (downstream?.Push != null)
-            {
-                if (downstream.Push?.ConnectionClosed != null)
+                var downstream = Formatters.FormatDataNoLength<Downstream>(buffer);
+                Debug.WriteDebug(downstream.ToString(), "DemuxDown.txt");
+                if (downstream?.Push != null)
                 {
-                    if (!downstream.Push.ConnectionClosed.HasConnectionId)
+                    if (downstream.Push?.ConnectionClosed != null)
                     {
-                        Console.WriteLine("Connection closed");
-                        TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
+                        if (downstream.Push.ConnectionClosed.HasConnectionId)
+                        {
+                            Console.WriteLine("Connection closed");
+                            TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
+                        }
                     }
                 }
+                return downstream;
             }
-            return downstream;
+            catch (Exception ex)
+            {
+                InternalEx.WriteEx(ex);
+                return null;
+            }
         }
 
         /// <summary>
