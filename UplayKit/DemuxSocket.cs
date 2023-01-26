@@ -82,17 +82,25 @@ namespace UplayKit
             if (IsClosed)
                 return;
 
-            sslStream.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
-            sslStream.Dispose();
-            sslStream.Close();
-            network.Dispose();
-            network.Close();
-            tcpClient.Dispose();
-            tcpClient.Close();
-            RequestId = 0;
-            IsClosed = true;
-            NewMessage -= DemuxSocket_NewMessage;
-            Debug.PWDebug("[DemuxSocket] Closed.");
+            try
+            {
+                sslStream.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
+                sslStream.Dispose();
+                sslStream.Close();
+                network.Dispose();
+                network.Close();
+                tcpClient.Dispose();
+                tcpClient.Close();
+                RequestId = 0;
+                IsClosed = true;
+                NewMessage -= DemuxSocket_NewMessage;
+                Debug.PWDebug("[DemuxSocket] Closed.");
+            }
+            catch (Exception ex)
+            {
+                InternalEx.WriteEx(ex);
+                return null;
+            }
         }
         #endregion
         #region Event
@@ -420,10 +428,17 @@ namespace UplayKit
         /// <param name="push">Pushed object</param>
         public void SendPush(Push push)
         {
-            Upstream up = new() { Push = push };
-            sslStream.Write(Formatters.FormatUpstream(up.ToByteArray()));
-            sslStream.Flush();
-            Debug.PWDebug("Write was successful!");
+            try
+            {
+                Upstream up = new() { Push = push };
+                sslStream.Write(Formatters.FormatUpstream(up.ToByteArray()));
+                sslStream.Flush();
+                Debug.PWDebug("Write was successful!");
+            }
+            catch (Exception ex)
+            {
+                InternalEx.WriteEx(ex);
+            }
         }
         #endregion
     }

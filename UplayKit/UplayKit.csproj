@@ -19,8 +19,16 @@
 	<PackageReleaseNotes>Released for Internal/Initial Testing</PackageReleaseNotes>
 	<SignAssembly>True</SignAssembly>
 	<AssemblyOriginatorKeyFile>../../Sign.snk</AssemblyOriginatorKeyFile>
-	<Version>0.0.0.2</Version>
+	<Version>0.0.0.3</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="changelog.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="changelog.txt" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="..\LICENSE">

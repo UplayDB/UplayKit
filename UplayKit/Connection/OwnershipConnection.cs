@@ -139,6 +139,10 @@ namespace UplayKit.Connection
                 if (writeToFile)
                 {
                     File.WriteAllText("Ownership.json", JsonConvert.SerializeObject(rsp.InitializeRsp, Formatting.Indented));
+                    MemoryStream ms = new();
+                    rsp.InitializeRsp.WriteTo(ms);
+                    File.WriteAllBytes("Ownership", ms.ToArray());
+
                 }
 
                 return rsp.InitializeRsp.OwnedGames.OwnedGames_.ToList();
