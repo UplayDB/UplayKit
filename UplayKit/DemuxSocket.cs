@@ -99,7 +99,6 @@ namespace UplayKit
             catch (Exception ex)
             {
                 InternalEx.WriteEx(ex);
-                return null;
             }
         }
         #endregion
