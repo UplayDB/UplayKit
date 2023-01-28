@@ -23,6 +23,8 @@ namespace UplayKit
         public SslStream sslStream;
         public TcpClient tcpClient;
         public NetworkStream network;
+        const int BUFFERSIZE = 2048;
+        private byte[] m_ReadBuffer = null;
         public uint RequestId { get; internal set; }
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
@@ -40,6 +42,7 @@ namespace UplayKit
         public Dictionary<uint, object> ConnectionObject = new();
 
         public bool StopTheCheck = false;
+        public static bool StopDataCheck = true;
         private bool PauseRead = false;
         #endregion
         #region Basic
@@ -57,12 +60,15 @@ namespace UplayKit
                 sslStream = new SslStream(tcpClient.GetStream());
                 SslClientAuthenticationOptions sslClientAuthenticationOptions = new()
                 {
-                    TargetHost = ConnectionHost
+                    TargetHost = ConnectionHost,
                 };
                 sslStream.AuthenticateAsClient(sslClientAuthenticationOptions);
                 RequestId = 1;
                 network = tcpClient.GetStream();
-                new Thread(TDataCheck).Start();
+                m_ReadBuffer = new byte[BUFFERSIZE];
+                Receive();
+                if (!StopDataCheck)
+                    new Thread(TDataCheck).Start();
                 NewMessage += DemuxSocket_NewMessage;
                 Debug.PWDebug("[DemuxSocket] Started.");
             }
@@ -103,6 +109,26 @@ namespace UplayKit
         }
         #endregion
         #region Event
+
+        private void Receive()
+        {
+            sslStream.BeginRead(m_ReadBuffer, 0, BUFFERSIZE, new AsyncCallback(EndReceive), null);
+        }
+        private void EndReceive(IAsyncResult ar)
+        {
+            try
+            {
+                int nBytes;
+                nBytes = sslStream.EndRead(ar);
+                byte[] buffer = new byte[4];
+                Debug.PWDebug($"[EndReceive] {m_ReadBuffer.Length} / {nBytes}");
+
+            }
+            catch (Exception ex)
+            {
+                InternalEx.WriteEx(ex);
+            }
+        }
         private void TDataCheck(object? obj)
         {
             while (!IsClosed && network != null)
@@ -111,6 +137,7 @@ namespace UplayKit
                 {
                     if (PauseRead == false && StopTheCheck == false)
                     {
+                        network.Socket.Listen(0);
                         // Thanks for SteamRE [TcpConnection.cs]
                         // waiting 1 ms and reading again
                         if (network.Socket.Poll(100000, SelectMode.SelectRead) && network.DataAvailable)
