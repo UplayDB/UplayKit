@@ -1,4 +1,7 @@
-﻿namespace UplayKit
+﻿using System;
+using System.Reflection.Metadata;
+
+namespace UplayKit
 {
     public class Debug
     {
@@ -9,6 +12,14 @@
             {
                 Console.WriteLine(obj.ToString());
                 WriteDebug(obj.ToString());
+            }
+        }
+        public static void PWDebug(object obj, string logname)
+        {
+            if (isDebug == true)
+            {
+                Console.WriteLine(obj.ToString());
+                WriteDebug(obj.ToString(), logname);
             }
         }
         public static void PrintDebug(object obj)
@@ -31,12 +42,22 @@
         {
             if (isDebug == true)
             {
-                FileInfo logFileInfo = new(logname);
-                DirectoryInfo logDirInfo = new(logFileInfo.DirectoryName);
-                if (!logDirInfo.Exists) logDirInfo.Create();
-                using FileStream fileStream = new(logname, FileMode.Append);
-                using StreamWriter log = new(fileStream);
-                log.WriteLine(strLog);
+                File.AppendAllText(logname, strLog + "\n");
+            }
+        }
+
+        public static void WriteBytes(byte[] bytes, string logname = "debug.txt")
+        {
+            if (isDebug == true)
+            {
+                File.WriteAllBytes(logname, bytes);
+            }
+        }
+        public static void WriteText(string text, string logname = "debug.txt")
+        {
+            if (isDebug == true)
+            {
+                File.WriteAllText(logname, text);
             }
         }
     }

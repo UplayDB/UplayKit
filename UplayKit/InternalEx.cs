@@ -12,7 +12,9 @@ namespace UplayKit
             ToWrite += $"\n{ex.StackTrace}";
             ToWrite += $"\n{ex.Message}";
             ToWrite += $"\n{ex.Source}";
+            ToWrite += $"\n{ex.TargetSite}";
             ToWrite += $"\n{JsonConvert.SerializeObject(ex.Data)}";
+            ToWrite += $"\n{ex.ToString()}";
             File.AppendAllText("UplayKit_Ex.txt", ToWrite);
         }
     }

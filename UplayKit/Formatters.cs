@@ -45,28 +45,44 @@ namespace UplayKit
 
         public static T? FormatData<T>(byte[] bytes) where T : IMessage<T>, new()
         {
-            if (bytes == null)
+            try
+            {
+                if (bytes == null)
+                    return default;
+
+                byte[] buffer = new byte[4];
+
+                using var ms = new MemoryStream(bytes);
+                ms.Read(buffer, 0, 4);
+                var responseLength = FormatLength(BitConverter.ToUInt32(buffer, 0));
+                if (responseLength == 0)
+                    return default;
+
+                MessageParser<T> parser = new(() => new T());
+                return parser.ParseFrom(ms);
+            }
+            catch (Exception ex)
+            {
+                InternalEx.WriteEx(ex);
                 return default;
-
-            byte[] buffer = new byte[4];
-
-            using var ms = new MemoryStream(bytes);
-            ms.Read(buffer, 0, 4);
-            var responseLength = FormatLength(BitConverter.ToUInt32(buffer, 0));
-            if (responseLength == 0)
-                return default;
-
-            MessageParser<T> parser = new(() => new T());
-            return parser.ParseFrom(ms);
+            }
         }
 
         public static T? FormatDataNoLength<T>(byte[] bytes) where T : IMessage<T>, new()
         {
-            if (bytes == null)
-                return default;
+            try
+            {
+                if (bytes == null)
+                    return default;
 
-            MessageParser<T> parser = new(() => new T());
-            return parser.ParseFrom(bytes);
+                MessageParser<T> parser = new(() => new T());
+                return parser.ParseFrom(bytes);
+            }
+            catch (Exception ex)
+            {
+                InternalEx.WriteEx(ex);
+                return default;
+            }
         }
     }
 }
