@@ -1,12 +1,29 @@
 --------------------------------------------------------------
- 0.0.0.4		2023 Jan 28
+ 0.0.0.4		2023 Jan 29
 --------------------------------------------------------------
-* Trying demuxsocket to use Less CPU but still can read more data!
+* DemuxSocket now using less CPU power!
+* Added better logging than before
+* Receiving feels slower, but its better.
+
 
 --------------------------------------------------------------
- 0.0.0.2-3		2023 Jan 24
+ 0.0.0.3		2023 Jan 26 - 29
 --------------------------------------------------------------
-* Added things (will say more later on)
+* Added TryCatch in Close,SendPush too
+* Ownership will be written to an "Ownership" file, no extension
+
+
+
+--------------------------------------------------------------
+ 0.0.0.2		2023 Jan 24 - 26
+--------------------------------------------------------------
+* Moved the project internally in different dir
+* GetUrlList in DownloadCon will now return back isServiceSuccess
+* Added InternalEx.WriteEx function to write fails in better format (sadly not saying which line :/)
+* Deleted "UplayKit - Backup.csproj"
+* Added TryCatch most of needed places
+* Copyright edit (2022-2023)
+
 
 --------------------------------------------------------------
  0.0.0.1		2023 Jan 20 - 24

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Reflection.Metadata;
-
-namespace UplayKit
+﻿namespace UplayKit
 {
     public class Debug
     {
