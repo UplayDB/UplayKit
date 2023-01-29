@@ -323,7 +323,7 @@ namespace UplayKit
                     }
                 }
                 PauseRead = false;
-                Debug.PWDebug("[SendReq] Final Response Length: " + responseLength);
+                Debug.PWDebug($"[SendReq] Final Response Length: {responseLength}/{buffer.Length}");
                 //Fail save!
                 if (responseLength == 0)
                 {
@@ -394,7 +394,7 @@ namespace UplayKit
                 }
                 PauseRead = false;
                 sslStream.Flush();
-                Debug.PWDebug("[SendUpstream] Final Response Length: " + responseLength);
+                Debug.PWDebug($"[SendUpstream] Final Response Length: {responseLength}/{buffer.Length}");
                 //Fail save!
                 if (responseLength == 0)
                     return null;
