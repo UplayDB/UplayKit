@@ -27,6 +27,7 @@ namespace UplayKit
         public uint RequestId { get; internal set; }
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
+        public int WaitInTimeMS = 10;
         public uint ClientVersion { get; internal set; } = 10799;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
@@ -372,7 +373,7 @@ namespace UplayKit
                         buffer = _InternalReaded.ToArray();
                         break;
                     }
-                    Thread.Sleep(10);
+                    Thread.Sleep(WaitInTimeMS);
                 }
                 InternalReaded = null;
                 InternalReadedLenght = null;
@@ -434,7 +435,7 @@ namespace UplayKit
                         buffer = _InternalReaded.ToArray();
                         break;
                     }
-                    Thread.Sleep(10);
+                    Thread.Sleep(WaitInTimeMS);
                 }
                 InternalReaded = null;
                 InternalReadedLenght = null;
