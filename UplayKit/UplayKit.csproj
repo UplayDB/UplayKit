@@ -14,12 +14,12 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>uplay,ubisoft,api,demux</PackageTags>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-	<Copyright>Copyright © UplayDB Team 2022</Copyright>
+	<Copyright>Copyright © UplayDB Team</Copyright>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	<PackageReleaseNotes>Released for Internal/Initial Testing</PackageReleaseNotes>
 	<SignAssembly>True</SignAssembly>
 	<AssemblyOriginatorKeyFile>../../Sign.snk</AssemblyOriginatorKeyFile>
-	<Version>0.0.0.6</Version>
+	<Version>0.0.0.7</Version>
   </PropertyGroup>
 
   <ItemGroup>
