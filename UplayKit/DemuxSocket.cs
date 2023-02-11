@@ -42,10 +42,12 @@ namespace UplayKit
         public Dictionary<uint, object> ConnectionObject = new();
 
         public static bool StopDataCheck = false;
+        private bool _StopCheck = false;
         private bool IsWaitinData = false;
         private const int BUFFERSIZE = 4;
         private byte[] ReadBuffer = null;
         private byte[]? InternalReaded = null;
+        private Task RecieveTask;
         #endregion
         #region Basic
         public DemuxSocket(bool UseLocal = false)
@@ -77,10 +79,8 @@ namespace UplayKit
                 if (!StopDataCheck)
                 {
                     ReadBuffer = new byte[BUFFERSIZE];
-                    var Rec = new Thread(Receive);
-                    Rec.Name = "ReceiveThread";
-                    Rec.Priority = ThreadPriority.Highest;
-                    Rec.Start();
+                    RecieveTask = new(Receive);
+                    RecieveTask.Start();
                 }
                 NewMessage += DemuxSocket_NewMessage;
                 Debug.PWDebug("[DemuxSocket] Started.", "DemuxSocket.log");
@@ -122,14 +122,31 @@ namespace UplayKit
         }
         #endregion
         #region Event
+        public void StopCheck()
+        {
+            _StopCheck = true;
+            RecieveTask.Dispose();
+        }
+
+        public void StartCheck()
+        {
+            _StopCheck = false;
+            RecieveTask = new(Receive);
+            RecieveTask.Start();
+        }
+
         private void Receive()
         {
             if (!IsClosed)
             {
-                Debug.PWDebug($"[Receive] Started!", "recieve.log");
-                sslStream.BeginRead(ReadBuffer, 0, BUFFERSIZE, new AsyncCallback(EndReceive), null);
+                if (!_StopCheck)
+                {
+                    Debug.PWDebug($"[Receive] Started!", "recieve.log");
+                    sslStream.BeginRead(ReadBuffer, 0, BUFFERSIZE, new AsyncCallback(EndReceive), null);
+                }
             }
         }
+
         private void EndReceive(IAsyncResult ar)
         {
             try
@@ -155,6 +172,15 @@ namespace UplayKit
                         }
 
                         Debug.PWDebug($"[Receive] Response is Readed!", "recieve.log");
+                        if (IsWaitinData)
+                        {
+                            Debug.PWDebug("[Receive] We have the data, writing down (IsWaitinData)", "recieve.log");
+                            InternalReaded = _InternalReaded;
+                            InternalReadedLenght = _InternalReadedLenght;
+                            Debug.PWDebug("[Receive] Restarting...", "recieve.log");
+                            Receive();
+                            return;
+                        }
                         var downstream = Formatters.FormatDataNoLength<Downstream>(_InternalReaded);
                         if (downstream != null)
                         {
@@ -196,7 +222,7 @@ namespace UplayKit
                     }
                     else
                     {
-                        File.WriteAllText("recieve.log", "[Receive] Something isn't Right!");
+                        Debug.PWDebug("[Receive] Something isn't Right!", "recieve.log");
                     }
                 }
                 else
@@ -451,6 +477,64 @@ namespace UplayKit
                 Debug.WriteText(downstream.ToString(), $"SendUpstream/{time}_rsp.log.txt");
                 CheckTheConnection(downstream);
                 return downstream;
+            }
+            catch (Exception ex)
+            {
+                InternalEx.WriteEx(ex);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Sending Bytes Request
+        /// </summary>
+        /// <param name="post"></param>
+        /// <returns></returns>
+        public byte[]? SendBytes(byte[] post)
+        {
+            try
+            {
+                byte[] buffer = new byte[4];
+                uint responseLength = 0;
+                Debug.PWDebug("[SendReq] We sent our Request!");
+                sslStream.Write(post);
+                IsWaitinData = true;
+                while (true)
+                {
+                    var _InternalReadedLenght = InternalReadedLenght;
+                    var _InternalReaded = InternalReaded;
+                    if (_InternalReadedLenght != null && _InternalReaded != null)
+                    {
+                        Debug.PWDebug("[SendReq] We receive from internal readed!");
+                        responseLength = (uint)_InternalReadedLenght;
+                        buffer = new byte[(int)_InternalReadedLenght];
+                        buffer = _InternalReaded.ToArray();
+                        break;
+                    }
+                    if (network.DataAvailable)
+                    {
+                        sslStream.Read(buffer, 0, 4);
+                        responseLength = Formatters.FormatLength(BitConverter.ToUInt32(buffer, 0));
+                        Console.WriteLine("[SendReq] Response Length: " + responseLength);
+                        if (responseLength == 0) { throw new Exception("Response Length from Demux is 0, something is not right"); }
+                        if (responseLength > 0)
+                        {
+                            buffer = new byte[responseLength];
+                            sslStream.Read(buffer, 0, (int)responseLength);
+                            break;
+                        }
+                    }
+                    Thread.Sleep(WaitInTimeMS);
+                }
+                InternalReaded = null;
+                InternalReadedLenght = null;
+                IsWaitinData = false;
+                Debug.PWDebug($"[SendReq] Final Response Length: {responseLength}/{buffer.Length}");
+                //Fail save!
+                if (responseLength == 0)
+                    return null;
+
+                return buffer;
             }
             catch (Exception ex)
             {
