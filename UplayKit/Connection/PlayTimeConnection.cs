@@ -51,6 +51,7 @@ namespace UplayKit.Connection
                     Console.WriteLine("Playtime Connection successful");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
+                    isConnectionClosed = false;
                 }
             }
         }

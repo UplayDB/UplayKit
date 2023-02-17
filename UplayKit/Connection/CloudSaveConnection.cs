@@ -50,7 +50,7 @@ namespace UplayKit.Connection
                     Console.WriteLine("CloudSave Connection successful");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
-
+                    isConnectionClosed = false;
                 }
             }
         }

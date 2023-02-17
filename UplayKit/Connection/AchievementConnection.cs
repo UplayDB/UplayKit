@@ -50,7 +50,7 @@ namespace UplayKit.Connection
                     Console.WriteLine("Achievement Connection successful.");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
-
+                    isConnectionClosed = false;
                 }
             }
         }

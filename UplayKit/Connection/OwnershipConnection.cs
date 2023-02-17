@@ -53,6 +53,7 @@ namespace UplayKit.Connection
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
                     socket.NewMessage += Socket_NewMessage;
+                    isConnectionClosed = false;
                 }
             }
         }

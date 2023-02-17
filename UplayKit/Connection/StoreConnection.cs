@@ -55,6 +55,7 @@ namespace UplayKit.Connection
                     socket.AddToDict(connectionId, ServiceName);
                     socket.RequestId++;
                     socket.NewMessage += Socket_NewMessage;
+                    isConnectionClosed = false;
                 }
             }
         }
