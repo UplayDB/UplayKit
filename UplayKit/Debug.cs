@@ -26,14 +26,6 @@
                 Console.WriteLine(obj.ToString());
             }
         }
-        public static Task PrintDebugAsync(object msg)
-        {
-            if (isDebug == true)
-            {
-                Console.WriteLine(msg.ToString());
-            }
-            return Task.CompletedTask;
-        }
 
         public static void WriteDebug(string strLog, string logname = "debug.txt")
         {

@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Microsoft.VisualBasic;
 using System.Net.Security;
 using System.Net.Sockets;
 using Uplay.Demux;
@@ -28,7 +29,7 @@ namespace UplayKit
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 10815;
+        public uint ClientVersion { get; internal set; } = 10824;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
         public bool IsClosed { get; internal set; } = false;
@@ -223,6 +224,7 @@ namespace UplayKit
                     else
                     {
                         Debug.PWDebug("[Receive] Something isn't Right!", "recieve.log");
+                        TerminateConnection(0);
                     }
                 }
                 else
