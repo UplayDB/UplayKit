@@ -155,7 +155,7 @@ namespace UplayKit.Connection
             }
         }
 
-        public (string,ulong) GetOwnershipToken(uint productId)
+        public (string, ulong) GetOwnershipToken(uint productId)
         {
             Req req = new()
             {
@@ -168,14 +168,14 @@ namespace UplayKit.Connection
             ReqId += 1;
             var rsp = SendRequest(req);
             if (rsp != null)
-            {    
+            {
                 isServiceSuccess = rsp.OwnershipTokenRsp.Success;
                 return (rsp.OwnershipTokenRsp.Token, rsp.OwnershipTokenRsp.Expiration);
             }
             else
             {
                 isServiceSuccess = false;
-                return ("",0);
+                return ("", 0);
             }
         }
 

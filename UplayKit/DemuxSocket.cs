@@ -1,5 +1,4 @@
 ﻿using Google.Protobuf;
-using Microsoft.VisualBasic;
 using System.Net.Security;
 using System.Net.Sockets;
 using Uplay.Demux;
@@ -29,7 +28,7 @@ namespace UplayKit
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 10836;
+        public uint ClientVersion { get; internal set; } = 10843;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
         public bool IsClosed { get; internal set; } = false;

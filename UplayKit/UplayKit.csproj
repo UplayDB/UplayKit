@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+	<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Title>$(AssemblyName)</Title>
@@ -19,7 +19,7 @@
 	<PackageReleaseNotes>Released for Internal/Initial Testing</PackageReleaseNotes>
 	<SignAssembly>True</SignAssembly>
 	<AssemblyOriginatorKeyFile>../../Sign.snk</AssemblyOriginatorKeyFile>
-	<Version>0.0.0.11</Version>
+	<Version>0.0.0.12</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,11 +42,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.21.12" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-    <PackageReference Include="RestSharp" Version="108.0.3" />
+    <PackageReference Include="Google.Protobuf" Version="3.22.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="RestSharp" Version="109.0.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <PackageReference Include="Uplay-Protobufs" Version="139.0.10836" />
+    <PackageReference Include="Uplay-Protobufs" Version="139.2.10843" />
   </ItemGroup>
 
 </Project>
