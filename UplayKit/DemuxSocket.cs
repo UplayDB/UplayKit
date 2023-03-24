@@ -48,10 +48,12 @@ namespace UplayKit
         private byte[] ReadBuffer = null;
         private byte[]? InternalReaded = null;
         private Task RecieveTask;
+        private bool IsLocal = false;
         #endregion
         #region Basic
         public DemuxSocket(bool UseLocal = false)
         {
+            IsLocal = UseLocal;
             if (Debug.isDebug)
             {
                 Directory.CreateDirectory("SendReq");
@@ -103,7 +105,8 @@ namespace UplayKit
 
             try
             {
-                sslStream.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
+                if (IsLocal)
+                    sslStream.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
                 sslStream.Dispose();
                 sslStream.Close();
                 network.Dispose();
@@ -119,7 +122,9 @@ namespace UplayKit
             {
                 InternalEx.WriteEx(ex);
             }
+            Console.WriteLine("[DemuxSocket] Closed.");
         }
+
         #endregion
         #region Event
         public void StopCheck()
@@ -215,6 +220,10 @@ namespace UplayKit
                                 {
                                     NewMessage?.Invoke(this, new(downstream.Push.Data));
                                 }
+                                if (downstream.Push.KeepAlive != null)
+                                {
+                                    KeepAlivePush();
+                                }
                             }
                         }
                         Debug.PWDebug("[Receive] Restarting...", "recieve.log");
@@ -229,6 +238,13 @@ namespace UplayKit
                 else
                 {
                     Debug.PWDebug("[Receive] Demux got closed we dont want to read again!", "recieve.log");
+                }
+            }
+            catch (SocketException socketex)
+            {
+                if (socketex.SocketErrorCode == SocketError.ConnectionReset)
+                {
+                    TerminateConnection(0);
                 }
             }
             catch (Exception ex)
@@ -338,12 +354,26 @@ namespace UplayKit
             SendPush(versionPush);
         }
 
+        public void KeepAlivePush()
+        {
+            Push keepalive = new()
+            {
+                KeepAlive = new()
+                { 
+                
+                }
+            };
+
+            SendPush(keepalive);
+        }
+
         /// <summary>
         /// Trying to Authenticate with UbiTicket
         /// </summary>
         /// <param name="token">Ubi Ticket</param>
+        /// <param name="KeepAlive">Keeping the Sokcet Alive</param>
         /// <returns>True or False</returns>
-        public bool Authenticate(string token)
+        public bool Authenticate(string token, bool KeepAlive = false)
         {
             RequestId++;
             Req authReq = new()

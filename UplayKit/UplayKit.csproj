@@ -19,7 +19,7 @@
 	<PackageReleaseNotes>Released for Internal/Initial Testing</PackageReleaseNotes>
 	<SignAssembly>True</SignAssembly>
 	<AssemblyOriginatorKeyFile>../../Sign.snk</AssemblyOriginatorKeyFile>
-	<Version>0.0.0.12</Version>
+	<Version>0.0.0.14</Version>
   </PropertyGroup>
 
   <ItemGroup>

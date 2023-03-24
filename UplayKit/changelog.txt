@@ -1,5 +1,14 @@
 --------------------------------------------------------------
- 0.0.0.12		2023 Mar 19 -
+ 0.0.0.13-4		2023 Mar 24 -
+--------------------------------------------------------------
+* Added Custom Service/Connection option for future
+* Crashing on InternalEx fixed
+* Fixed the SocketException, now it closing the demux
+* Added KeepAlive option
+
+
+--------------------------------------------------------------
+ 0.0.0.12		2023 Mar 19 - 24
 --------------------------------------------------------------
 * Update from 10836 to 10843
 * Updated Nuget packages

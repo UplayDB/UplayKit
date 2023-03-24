@@ -15,8 +15,15 @@ namespace UplayKit
             ToWrite += $"\nSource: {ex.Source}";
             ToWrite += $"\nHResult: {ex.HResult}";
             ToWrite += $"\nHelpLink: {ex.HelpLink}";
-            ToWrite += $"\nTargetSite: {JsonConvert.SerializeObject(ex.TargetSite)}";
-            ToWrite += $"\nData: {JsonConvert.SerializeObject(ex.Data)}";
+            try
+            {
+                ToWrite += $"\nTargetSite: {JsonConvert.SerializeObject(ex.TargetSite)}";
+                ToWrite += $"\nData: {JsonConvert.SerializeObject(ex.Data)}";
+            }
+            catch
+            {
+                ToWrite += $"\nData: {JsonConvert.SerializeObject(ex.Data)}";
+            }
             File.AppendAllText("UplayKit_Ex.txt", ToWrite);
         }
     }
