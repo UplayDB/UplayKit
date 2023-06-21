@@ -1,7 +1,9 @@
 ﻿using Google.Protobuf;
-using System.Net.Security;
 using System.Net.Sockets;
 using Uplay.Demux;
+using NetCoreServer;
+using System.Net;
+using System.Security.Authentication;
 
 namespace UplayKit
 {
@@ -15,23 +17,17 @@ namespace UplayKit
         public DataMessage Data { get; set; }
     }
     #endregion
-    public class DemuxSocket
+    public class DemuxSocket : SslClient
     {
         #region Fields
         public event EventHandler<DemuxEventArgs> NewMessage;
-
-        public SslStream sslStream;
-        public TcpClient tcpClient;
-        public NetworkStream network;
-        private uint? InternalReadedLenght = null;
         public uint RequestId { get; internal set; }
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 10857;
+        public uint ClientVersion { get; internal set; } = 10872;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
-        public bool IsClosed { get; internal set; } = false;
         /// <summary>
         /// Connection Dictionary for the Service Names.
         /// </summary>
@@ -40,218 +36,119 @@ namespace UplayKit
         /// Connection Dictionary for the whole Connection (this)
         /// </summary>
         public Dictionary<uint, object> ConnectionObject = new();
-
-        public static bool StopDataCheck = false;
-        private bool _StopCheck = false;
-        private bool IsWaitinData = false;
-        private const int BUFFERSIZE = 4;
-        private byte[] ReadBuffer = null;
-        private byte[]? InternalReaded = null;
-        private Task RecieveTask;
-        private bool IsLocal = false;
+        bool IsWaitingData;
+        byte[]? InternalReaded = null;
+        uint LengthRemaining = 0;
+        bool LengthWaiting;
+        byte[]? ReadedOnRec = null;
         #endregion
         #region Basic
-        public DemuxSocket(bool UseLocal = false)
+
+        public DemuxSocket() : base(new SslContext(SslProtocols.Tls12), new DnsEndPoint(ConnectionHost, ConnectionPort, AddressFamily.InterNetwork))
         {
-            IsLocal = UseLocal;
+            Start();
+        }
+
+        public DemuxSocket(SslContext context) : base(context, new DnsEndPoint(ConnectionHost, ConnectionPort, AddressFamily.InterNetwork))
+        {
+            Start();
+        }
+        public void Start()
+        {
             if (Debug.isDebug)
             {
                 Directory.CreateDirectory("SendReq");
                 Directory.CreateDirectory("SendUpstream");
             }
-            try
-            {
-                if (UseLocal)
-                {
-                    ConnectionHost = "dmx.local.upc.ubisoft.com";
-                    ConnectionPort = 6000;
-                }
-                tcpClient = new TcpClient();
-                tcpClient.ReceiveBufferSize = 2048;
-                tcpClient.SendBufferSize = 2048;
-                tcpClient.Connect(ConnectionHost, ConnectionPort);
-                sslStream = new SslStream(tcpClient.GetStream());
-                SslClientAuthenticationOptions sslClientAuthenticationOptions = new()
-                {
-                    TargetHost = ConnectionHost,
-                };
-                sslStream.AuthenticateAsClient(sslClientAuthenticationOptions);
-                RequestId = 1;
-                network = tcpClient.GetStream();
-                if (!StopDataCheck)
-                {
-                    ReadBuffer = new byte[BUFFERSIZE];
-                    RecieveTask = new(Receive);
-                    RecieveTask.Start();
-                }
-                NewMessage += DemuxSocket_NewMessage;
-                Debug.PWDebug("[DemuxSocket] Started.", "DemuxSocket.log");
-            }
-            catch (Exception ex)
-            {
-                InternalEx.WriteEx(ex);
-                Console.WriteLine("Connection to demux has been failed!");
-            }
-
+            NewMessage += DemuxSocket_NewMessage;
+            var Connected = Connect();
+            ReceiveAsync();
+            Debug.PWDebug("DemuxSocket is "  + Connected);
         }
 
-        /// <summary>
-        /// Closing the Connection safely
-        /// </summary>
-        public void Close()
+        protected override void OnReceived(byte[] buffer, long offset, long size)
         {
-            if (IsClosed)
-                return;
-
-            try
+            Debug.WriteDebug("OnReceived!");
+            Debug.WriteDebug($"Buffer L: {buffer.Length} | Offset : {offset} | Size: {size}");
+            Debug.WriteDebug($"Bytes Sent: {BytesSent} | Bytes sending: {BytesSending} | Bytes Pending {BytesPending} | Bytes Recieved {BytesReceived}");
+            byte[]? _InternalReaded;
+            if (LengthWaiting)
             {
-                if (IsLocal)
-                    sslStream.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
-                sslStream.Dispose();
-                sslStream.Close();
-                network.Dispose();
-                network.Close();
-                tcpClient.Dispose();
-                tcpClient.Close();
-                RequestId = 0;
-                IsClosed = true;
-                NewMessage -= DemuxSocket_NewMessage;
-                Debug.PWDebug("[DemuxSocket] Closed.", "DemuxSocket.log");
-            }
-            catch (Exception ex)
-            {
-                InternalEx.WriteEx(ex);
-            }
-            Console.WriteLine("[DemuxSocket] Closed.");
-        }
-
-        #endregion
-        #region Event
-        public void StopCheck()
-        {
-            _StopCheck = true;
-            RecieveTask.Dispose();
-        }
-
-        public void StartCheck()
-        {
-            _StopCheck = false;
-            RecieveTask = new(Receive);
-            RecieveTask.Start();
-        }
-
-        private void Receive()
-        {
-            if (!IsClosed)
-            {
-                if (!_StopCheck)
+                _InternalReaded = buffer.Take((int)size).ToArray();
+                ReadedOnRec = ReadedOnRec.Concat(_InternalReaded).ToArray();
+                _InternalReaded = buffer.Take((int)size).ToArray();
+                if (LengthRemaining != _InternalReaded.Length)
                 {
-                    Debug.PWDebug($"[Receive] Started!", "recieve.log");
-                    sslStream.BeginRead(ReadBuffer, 0, BUFFERSIZE, new AsyncCallback(EndReceive), null);
-                }
-            }
-        }
-
-        private void EndReceive(IAsyncResult ar)
-        {
-            try
-            {
-                if (!IsClosed)
-                {
-                    int nBytes;
-                    nBytes = sslStream.EndRead(ar);
-                    if (nBytes > 0)
-                    {
-                        Debug.PWDebug($"[Receive] Must be 4!: {ReadBuffer.Length} / {nBytes}", "recieve.log");
-                        var _InternalReadedLenght = Formatters.FormatLength(BitConverter.ToUInt32(ReadBuffer, 0));
-                        Debug.PWDebug($"[Receive] Response Length is {_InternalReadedLenght}!", "recieve.log");
-                        var _InternalReaded = new byte[(int)_InternalReadedLenght];
-                        var readed = 0;
-                        for (int i = 0; i < _InternalReadedLenght; i++)
-                            readed += sslStream.Read(_InternalReaded, i, 1);
-
-                        Debug.PWDebug($"[Receive] Readed lenght: {_InternalReaded.Length} / {readed}", "recieve.log");
-                        if (readed != _InternalReaded.Length)
-                        {
-                            Console.WriteLine("We broke It!");
-                        }
-
-                        Debug.PWDebug($"[Receive] Response is Readed!", "recieve.log");
-                        if (IsWaitinData)
-                        {
-                            Debug.PWDebug("[Receive] We have the data, writing down (IsWaitinData)", "recieve.log");
-                            InternalReaded = _InternalReaded;
-                            InternalReadedLenght = _InternalReadedLenght;
-                            Debug.PWDebug("[Receive] Restarting...", "recieve.log");
-                            Receive();
-                            return;
-                        }
-                        var downstream = Formatters.FormatDataNoLength<Downstream>(_InternalReaded);
-                        if (downstream != null)
-                        {
-                            Debug.WriteDebug(downstream.ToString(), "Receive.txt");
-                            if (IsWaitinData)
-                            {
-                                Debug.PWDebug("[Receive] We have the data, writing down (IsWaitinData)", "recieve.log");
-                                InternalReaded = _InternalReaded;
-                                InternalReadedLenght = _InternalReadedLenght;
-                                Debug.PWDebug("[Receive] Restarting...", "recieve.log");
-                                Receive();
-                                return;
-                            }
-                            if (downstream.Response != null)
-                            {
-                                Debug.PWDebug("[Receive] We have the data, writing down", "recieve.log");
-                                InternalReaded = _InternalReaded;
-                                InternalReadedLenght = _InternalReadedLenght;
-                            }
-                            if (downstream.Push != null)
-                            {
-                                if (downstream.Push.ClientOutdated != null)
-                                {
-                                    Debug.PWDebug("Your Client is Outdated!", "recieve.log");
-                                    TerminateConnection(0);
-                                }
-                                if (downstream.Push.ConnectionClosed != null)
-                                {
-                                    TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
-                                }
-                                if (downstream.Push.Data != null && !IsWaitinData)
-                                {
-                                    NewMessage?.Invoke(this, new(downstream.Push.Data));
-                                }
-                                if (downstream.Push.KeepAlive != null)
-                                {
-                                    KeepAlivePush();
-                                }
-                            }
-                        }
-                        Debug.PWDebug("[Receive] Restarting...", "recieve.log");
-                        Receive();
-                    }
-                    else
-                    {
-                        Debug.PWDebug("[Receive] Something isn't Right!", "recieve.log");
-                        TerminateConnection(0);
-                    }
+                    LengthWaiting = true;
+                    LengthRemaining -= (uint)_InternalReaded.Length;
                 }
                 else
                 {
-                    Debug.PWDebug("[Receive] Demux got closed we dont want to read again!", "recieve.log");
+                    Debug.WriteDebug($"Finally readed!");
+                    LengthWaiting = false;
+                    LengthRemaining = 0;
+                    _InternalReaded = ReadedOnRec;
                 }
             }
-            catch (SocketException socketex)
+            else
             {
-                if (socketex.SocketErrorCode == SocketError.ConnectionReset)
+                var _InternalReadedLenght = Formatters.FormatLength(BitConverter.ToUInt32(buffer[..4], 0));
+                Debug.WriteDebug($"Should Read: {_InternalReadedLenght}");
+                _InternalReaded = buffer.Skip(4).Take((int)_InternalReadedLenght).ToArray();
+                Debug.WriteDebug($"Readed Bytes: {_InternalReaded.Length}");
+                if (_InternalReadedLenght != _InternalReaded.Length)
                 {
-                    TerminateConnection(0);
+                    LengthWaiting = true;
+                    LengthRemaining = _InternalReadedLenght - (uint)_InternalReaded.Length;
+                    ReadedOnRec = _InternalReaded;
                 }
             }
-            catch (Exception ex)
-            {
-                InternalEx.WriteEx(ex);
+            
+
+
+            if (!IsWaitingData)
+            { 
+                //  We are not waiting any data! Therefore must be a push!
+                //  First byte is a Push byte!
+                if (_InternalReaded[0] == 0x12)
+                {
+                    var downstream = Formatters.FormatDataNoLength<Downstream>(_InternalReaded);
+                    CheckTheConnection(downstream);
+                    if (downstream != null && downstream.Push.Data != null)
+                        NewMessage?.Invoke(this, new DemuxEventArgs(downstream.Push.Data));
+                    if (downstream != null && downstream.Push.KeepAlive != null)
+                        this.KeepAlivePush();
+                }
+                else
+                {
+                    Debug.PWDebug($"Unknown byte! {_InternalReaded[0]}");
+                    //Debug.PWDebug($"Unknown byte! {_InternalReaded[0]}   ", "ERROR");
+                    File.WriteAllBytes("Error_Received_Bytes", _InternalReaded);
+                }
             }
+            else if (!LengthWaiting)
+            {
+                InternalReaded = _InternalReaded;
+            }
+            ReceiveAsync();
         }
+
+        protected override void OnDisconnected()
+        {
+            NewMessage -= DemuxSocket_NewMessage;
+        }
+
+        protected override void OnError(SocketError error)
+        {
+            Console.WriteLine("ERROR: " + error);
+        }
+
+        protected override void OnDisconnecting()
+        {
+            Debug.PWDebug("DISCONNECTING!!");
+        }
+        #endregion
+        #region Event
         private void DemuxSocket_NewMessage(object? sender, DemuxEventArgs e)
         {
             Debug.WriteDebug(e.Data.ToString(), "NewMessage.txt");
@@ -301,7 +198,7 @@ namespace UplayKit
             Debug.PWDebug($"Connection Terminated ID: {connectionID}, Reason: {errorCode}");
             if (connectionID == 0)
             {
-                Close();
+                Disconnect();
                 return;
             }
             var CloseMethod = ConnectionObject[connectionID].GetType().GetMethod("Close");
@@ -311,91 +208,6 @@ namespace UplayKit
             }
         }
 
-        #endregion
-        #region Communicating with Current Demux
-        /// <summary>
-        /// Checking if the Current version is same as the Latest
-        /// </summary>
-        /// <returns>True or False</returns>
-        public bool VersionCheck()
-        {
-            RequestId++;
-            Req patchreq = new()
-            {
-                GetPatchInfoReq = new()
-                {
-                    PatchTrackId = "DEFAULT",
-                    TestConfig = TestConfig,
-                    TrackType = 0
-                },
-                RequestId = RequestId
-            };
-            var patchrsp = SendReq(patchreq);
-            if (patchrsp != null)
-            {
-                return (ClientVersion == patchrsp.GetPatchInfoRsp.LatestVersion);
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Initially pushing the Current version
-        /// </summary>
-        public void PushVersion()
-        {
-            Push versionPush = new()
-            {
-                ClientVersion = new()
-                {
-                    Version = ClientVersion
-                }
-            };
-
-            SendPush(versionPush);
-        }
-
-        public void KeepAlivePush()
-        {
-            Push keepalive = new()
-            {
-                KeepAlive = new()
-                { 
-                
-                }
-            };
-
-            SendPush(keepalive);
-        }
-
-        /// <summary>
-        /// Trying to Authenticate with UbiTicket
-        /// </summary>
-        /// <param name="token">Ubi Ticket</param>
-        /// <param name="KeepAlive">Keeping the Sokcet Alive</param>
-        /// <returns>True or False</returns>
-        public bool Authenticate(string token, bool KeepAlive = false)
-        {
-            RequestId++;
-            Req authReq = new()
-            {
-                RequestId = RequestId,
-                AuthenticateReq = new()
-                {
-                    ClientId = "uplay_pc",
-                    SendKeepAlive = false,
-                    Token = new()
-                    {
-                        UbiTicket = token
-                    }
-                }
-            };
-            var authRsp = SendReq(authReq);
-            if (authRsp == null)
-            {
-                return false;
-            }
-            return authRsp.AuthenticateRsp.Success;
-        }
         #endregion
         #region Ssl Communication with Demux
 
@@ -407,58 +219,28 @@ namespace UplayKit
         /// <exception cref="Exception">If the Response Length from Response is 0</exception>
         public Rsp? SendReq(Req req)
         {
-            try
+            Debug.WriteText(req.ToString(), $"SendReq/{req.RequestId}_req.txt");
+            Upstream post = new() { Request = req };
+            var up = Formatters.FormatUpstream(post.ToByteArray());
+            IsWaitingData = true;
+            long sentBytes = Send(up);
+            if (sentBytes == up.Length)
             {
-                Upstream post = new() { Request = req };
-                var up = Formatters.FormatUpstream(post.ToByteArray());
-                byte[] buffer = new byte[4];
-                uint responseLength = 0;
-                Debug.WriteText(post.ToString(), $"SendReq/{req.RequestId}_req.log.txt");
-                Debug.WriteBytes(up, $"SendReq/{req.RequestId}_req.blog.txt");
-                Debug.PWDebug("[SendReq] We sent our Request!");
-                sslStream.Write(up);
-                IsWaitinData = true;
-                while (true)
+                while (InternalReaded == null)
                 {
-                    var _InternalReadedLenght = InternalReadedLenght;
-                    var _InternalReaded = InternalReaded;
-                    if (_InternalReadedLenght != null && _InternalReaded != null)
-                    {
-                        Debug.PWDebug("[SendReq] We receive from internal readed!");
-                        responseLength = (uint)_InternalReadedLenght;
-                        buffer = new byte[(int)_InternalReadedLenght];
-                        buffer = _InternalReaded.ToArray();
-                        break;
-                    }
                     Thread.Sleep(WaitInTimeMS);
                 }
+                IsWaitingData = false;
+                var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
                 InternalReaded = null;
-                InternalReadedLenght = null;
-                IsWaitinData = false;
-                Debug.PWDebug($"[SendReq] Final Response Length: {responseLength}/{buffer.Length}");
-                //Fail save!
-                if (responseLength == 0)
-                    return null;
-
-                Debug.WriteBytes(buffer, $"SendReq/{req.RequestId}_rsp.blog.txt");
-                var downstream = Formatters.FormatDataNoLength<Downstream>(buffer);
-                Debug.WriteText(downstream.ToString(), $"SendReq/{req.RequestId}_rsp.log.txt");
-                CheckTheConnection(downstream);
-                if (downstream != null)
+                if (downstream?.Response != null)
                 {
-                    if (downstream.Response != null)
-                    {
-                        Debug.WriteText(downstream.Response.ToString(), $"SendReq/{req.RequestId}_rsp_rsp.log.txt");
-                        return downstream.Response;
-                    }
+                    Debug.WriteText(downstream.Response.ToString(), $"SendReq/{req.RequestId}_rsp.txt");
+                    return downstream.Response;
                 }
-                return null;
             }
-            catch (Exception ex)
-            {
-                InternalEx.WriteEx(ex);
-                return null;
-            }
+            IsWaitingData = false;
+            return null;
         }
 
         /// <summary>
@@ -467,53 +249,30 @@ namespace UplayKit
         /// <param name="upstream">Any Upstream</param>
         /// <returns>Any Downstream or Null</returns>
         /// <exception cref="Exception">If the Response Length from Response is 0</exception>
-        public Downstream? SendUpstream(Upstream upstream)
+        public Downstream? SendUpstream(Upstream up)
         {
-            try
+            Debug.WriteText(up.ToString(), $"SendUpstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_up.txt");
+            var upbytes = Formatters.FormatUpstream(up.ToByteArray());
+            Debug.PWDebug("[SendUpstream] We sent our Upstream!");
+            long sentBytes = Send(upbytes);
+            IsWaitingData = true;
+            if (sentBytes == upbytes.Length)
             {
-                var time = DateTime.Now.ToFileTime();
-                byte[] buffer = new byte[4];
-                uint responseLength;
-                var up = Formatters.FormatUpstream(upstream.ToByteArray());
-                Debug.WriteText(upstream.ToString(), $"SendUpstream/{time}_req.log.txt");
-                Debug.WriteBytes(up, $"SendUpstream/{time}_req.blog.txt");
-                Debug.PWDebug("[SendUpstream] We sent our Upstream!");
-                sslStream.Write(up);
-                IsWaitinData = true;
-                while (true)
+                while (InternalReaded == null)
                 {
-                    var _InternalReadedLenght = InternalReadedLenght;
-                    var _InternalReaded = InternalReaded;
-                    if (_InternalReadedLenght != null && _InternalReaded != null)
-                    {
-                        Debug.PWDebug("[SendUpstream] We receive from internal readed!");
-                        responseLength = (uint)_InternalReadedLenght;
-                        buffer = new byte[(int)_InternalReadedLenght];
-                        buffer = _InternalReaded.ToArray();
-                        break;
-                    }
                     Thread.Sleep(WaitInTimeMS);
                 }
+                IsWaitingData = false;
+                var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
                 InternalReaded = null;
-                InternalReadedLenght = null;
-                IsWaitinData = false;
-                sslStream.Flush();
-                Debug.PWDebug($"[SendUpstream] Final Response Length: {responseLength}/{buffer.Length}");
-                //Fail save!
-                if (responseLength == 0)
-                    return null;
-
-                Debug.WriteBytes(buffer, $"SendUpstream/{time}_rsp.blog.txt");
-                var downstream = Formatters.FormatDataNoLength<Downstream>(buffer);
-                Debug.WriteText(downstream.ToString(), $"SendUpstream/{time}_rsp.log.txt");
-                CheckTheConnection(downstream);
-                return downstream;
+                if (downstream != null)
+                {
+                    Debug.WriteText(downstream.ToString(), $"SendUpstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_down.txt");
+                    return downstream;
+                }
             }
-            catch (Exception ex)
-            {
-                InternalEx.WriteEx(ex);
-                return null;
-            }
+            IsWaitingData = false;
+            return null;
         }
 
         /// <summary>
@@ -523,55 +282,21 @@ namespace UplayKit
         /// <returns></returns>
         public byte[]? SendBytes(byte[] post)
         {
-            try
+            long sentBytes = Send(Formatters.FormatUpstream(post));
+            IsWaitingData = true;
+            if (sentBytes == post.Length)
             {
-                byte[] buffer = new byte[4];
-                uint responseLength = 0;
-                Debug.PWDebug("[SendReq] We sent our Request!");
-                sslStream.Write(post);
-                IsWaitinData = true;
-                while (true)
+                while (InternalReaded == null)
                 {
-                    var _InternalReadedLenght = InternalReadedLenght;
-                    var _InternalReaded = InternalReaded;
-                    if (_InternalReadedLenght != null && _InternalReaded != null)
-                    {
-                        Debug.PWDebug("[SendReq] We receive from internal readed!");
-                        responseLength = (uint)_InternalReadedLenght;
-                        buffer = new byte[(int)_InternalReadedLenght];
-                        buffer = _InternalReaded.ToArray();
-                        break;
-                    }
-                    if (network.DataAvailable)
-                    {
-                        sslStream.Read(buffer, 0, 4);
-                        responseLength = Formatters.FormatLength(BitConverter.ToUInt32(buffer, 0));
-                        Console.WriteLine("[SendReq] Response Length: " + responseLength);
-                        if (responseLength == 0) { throw new Exception("Response Length from Demux is 0, something is not right"); }
-                        if (responseLength > 0)
-                        {
-                            buffer = new byte[responseLength];
-                            sslStream.Read(buffer, 0, (int)responseLength);
-                            break;
-                        }
-                    }
                     Thread.Sleep(WaitInTimeMS);
                 }
+                IsWaitingData = false;
+                var returner = InternalReaded;
                 InternalReaded = null;
-                InternalReadedLenght = null;
-                IsWaitinData = false;
-                Debug.PWDebug($"[SendReq] Final Response Length: {responseLength}/{buffer.Length}");
-                //Fail save!
-                if (responseLength == 0)
-                    return null;
-
-                return buffer;
+                return returner;
             }
-            catch (Exception ex)
-            {
-                InternalEx.WriteEx(ex);
-                return null;
-            }
+            IsWaitingData = false;
+            return null;
         }
 
         /// <summary>
@@ -583,8 +308,7 @@ namespace UplayKit
             try
             {
                 Upstream up = new() { Push = push };
-                sslStream.Write(Formatters.FormatUpstream(up.ToByteArray()));
-                sslStream.Flush();
+                Send(Formatters.FormatUpstream(up.ToByteArray()));
                 Debug.PWDebug("Write was successful!");
             }
             catch (Exception ex)
