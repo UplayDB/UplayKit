@@ -4,6 +4,9 @@ using Uplay.Demux;
 using NetCoreServer;
 using System.Net;
 using System.Security.Authentication;
+using System.Linq;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace UplayKit
 {
@@ -25,7 +28,7 @@ namespace UplayKit
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 10872;
+        public uint ClientVersion { get; internal set; } = 11028;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
         /// <summary>
@@ -41,6 +44,7 @@ namespace UplayKit
         uint LengthRemaining = 0;
         bool LengthWaiting;
         byte[]? ReadedOnRec = null;
+        bool Overflow = false;
         #endregion
         #region Basic
 
@@ -59,6 +63,7 @@ namespace UplayKit
             {
                 Directory.CreateDirectory("SendReq");
                 Directory.CreateDirectory("SendUpstream");
+                Context.CertificateValidationCallback = (object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) => true;
             }
             NewMessage += DemuxSocket_NewMessage;
             var Connected = Connect();
@@ -68,19 +73,49 @@ namespace UplayKit
 
         protected override void OnReceived(byte[] buffer, long offset, long size)
         {
-            Debug.WriteDebug("OnReceived!");
+            Debug.WriteDebug("OnReceived!\n");
             Debug.WriteDebug($"Buffer L: {buffer.Length} | Offset : {offset} | Size: {size}");
             Debug.WriteDebug($"Bytes Sent: {BytesSent} | Bytes sending: {BytesSending} | Bytes Pending {BytesPending} | Bytes Recieved {BytesReceived}");
             byte[]? _InternalReaded;
             if (LengthWaiting)
             {
+                byte[] preReadedOnRec = ReadedOnRec;
                 _InternalReaded = buffer.Take((int)size).ToArray();
+                /*
+                if (LengthRemaining < size)
+                {
+                    Debug.WriteDebug("LengthRemaining < size! Parsing only the remaining!");
+                    _InternalReaded = _InternalReaded.Take((int)LengthRemaining).ToArray();
+                    File.WriteAllBytes("push_msg",buffer[(int)LengthRemaining..size]);
+                }*/
                 ReadedOnRec = ReadedOnRec.Concat(_InternalReaded).ToArray();
-                _InternalReaded = buffer.Take((int)size).ToArray();
                 if (LengthRemaining != _InternalReaded.Length)
                 {
+                    Debug.WriteDebug($"PRE: {LengthRemaining}");
+                    uint pre = LengthRemaining;
                     LengthWaiting = true;
                     LengthRemaining -= (uint)_InternalReaded.Length;
+                    Debug.WriteDebug($"POST: {LengthRemaining}");
+                    if (pre < LengthRemaining)
+                    {
+                        Console.WriteLine((int)pre - size);
+                        Console.WriteLine((int)LengthRemaining - _InternalReaded.Length);
+                        Console.WriteLine(Math.Abs((int)LengthRemaining - _InternalReaded.Length));
+                        Console.WriteLine((uint)Math.Abs((int)LengthRemaining - _InternalReaded.Length));
+                        LengthRemaining = (uint)Math.Abs((int)LengthRemaining - _InternalReaded.Length);
+                        Debug.WriteDebug("PRE bytes are BIGGER than remaining! overflow on!");
+                        Debug.WriteDebug($"New: {LengthRemaining}");
+
+                        File.WriteAllBytes("error_pre_bytes", preReadedOnRec);
+                        File.WriteAllBytes("error_readed_bytes", _InternalReaded);
+                        File.WriteAllBytes("error_post_bytes", ReadedOnRec);
+                        File.WriteAllBytes("error_buffer_rem_size", buffer[(int)pre..(int)size]);
+
+                        LengthWaiting = false;
+                        LengthRemaining = 0;
+                        _InternalReaded = ReadedOnRec;
+                        ReadedOnRec = null;
+                    }
                 }
                 else
                 {
@@ -88,12 +123,13 @@ namespace UplayKit
                     LengthWaiting = false;
                     LengthRemaining = 0;
                     _InternalReaded = ReadedOnRec;
+                    ReadedOnRec = null;
                 }
             }
             else
             {
                 var _InternalReadedLenght = Formatters.FormatLength(BitConverter.ToUInt32(buffer[..4], 0));
-                Debug.WriteDebug($"Should Read: {_InternalReadedLenght}");
+                Debug.WriteDebug($"Should Read: {_InternalReadedLenght} | {BitConverter.ToString(buffer[..4])}");
                 _InternalReaded = buffer.Skip(4).Take((int)_InternalReadedLenght).ToArray();
                 Debug.WriteDebug($"Readed Bytes: {_InternalReaded.Length}");
                 if (_InternalReadedLenght != _InternalReaded.Length)
@@ -101,6 +137,13 @@ namespace UplayKit
                     LengthWaiting = true;
                     LengthRemaining = _InternalReadedLenght - (uint)_InternalReaded.Length;
                     ReadedOnRec = _InternalReaded;
+                }
+                else
+                {
+                    Debug.WriteDebug("No further reading required!");
+                    LengthWaiting = false;
+                    LengthRemaining = 0;
+                    ReadedOnRec = null;
                 }
             }
             
@@ -131,6 +174,7 @@ namespace UplayKit
                 InternalReaded = _InternalReaded;
             }
             ReceiveAsync();
+            Debug.PWDebug("Ask to recieve sent!");
         }
 
         protected override void OnDisconnected()

@@ -405,6 +405,36 @@ namespace UplayKit.Connection
                 return "";
             }
         }
+
+        public SwitchProductBranchRsp? SwitchProductBranch(uint productId, uint branchId, string? password)
+        {
+            Req req = new()
+            {
+                RequestId = ReqId,
+                SwitchProductBranchReq = new()
+                {
+                   SpecifiedBranch = new()
+                   {
+                       ProductId = productId,
+                       BranchId = branchId,
+                   }
+                }
+            };
+            if (password != null)
+                req.SwitchProductBranchReq.SpecifiedBranch.Password = password;
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = (rsp.SwitchProductBranchRsp.Result == SwitchProductBranchRsp.Types.Result.Success);
+                return rsp.SwitchProductBranchRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
+            }
+        }
         #endregion
     }
 }
