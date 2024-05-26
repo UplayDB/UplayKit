@@ -89,10 +89,13 @@ namespace UplayKit.Connection
                 return null;
 
             var ds = Formatters.FormatData<Rsp>(down.Push.Data.Data.ToByteArray());
-            Debug.WriteDebug(ds.ToString(), "ach.txt");
+
 
             if (ds != null)
+            {
+                Debug.WriteDebug(ds.ToString(), "ach.txt");
                 return ds;
+            }  
             return null;
         }
         #endregion

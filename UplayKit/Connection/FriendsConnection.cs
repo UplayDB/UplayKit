@@ -14,7 +14,7 @@ namespace UplayKit.Connection
         public List<Friend> Friends_Send;
         public List<Friend> Friends_Received;
         public static readonly string ServiceName = "friends_service";
-        public event EventHandler<Push> PushEvent;
+        public event EventHandler<Push>? PushEvent;
         private uint ReqId { get; set; } = 1;
         public FriendsConnection(DemuxSocket demuxSocket)
         {
@@ -101,10 +101,12 @@ namespace UplayKit.Connection
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-            Debug.WriteDebug(ds.ToString(), "friends.txt");
 
             if (ds != null || ds?.Response != null)
+            {
+                Debug.WriteDebug(ds.ToString(), "friends.txt");
                 return ds.Response;
+            }
             return null;
         }
 

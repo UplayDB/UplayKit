@@ -10,9 +10,9 @@ namespace UplayKit.Connection
         private DemuxSocket socket;
         public bool isServiceSuccess = false;
         public bool isConnectionClosed = false;
-        public Storefront storefront;
+        public Storefront storefront = new();
         public static readonly string ServiceName = "store_service";
-        public event EventHandler<Push> PushEvent;
+        public event EventHandler<Push>? PushEvent;
         private uint ReqId { get; set; } = 1;
         public StoreConnection(DemuxSocket demuxSocket)
         {
@@ -110,9 +110,12 @@ namespace UplayKit.Connection
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-            Debug.WriteDebug(ds.ToString(), "store.txt");
+
             if (ds != null || ds?.Response != null)
+            {
+                Debug.WriteDebug(ds.ToString(), "store.txt");
                 return ds.Response;
+            }  
             return null;
         }
         #endregion

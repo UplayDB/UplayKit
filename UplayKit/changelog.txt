@@ -1,5 +1,16 @@
 --------------------------------------------------------------
- 0.0.1.2		2024 Jan 31 -
+ 0.0.2.0		2024 May 26 -
+--------------------------------------------------------------
+* Update from 11028 to 11052
+* Updated Dependecies
+* Fixed wrong OnReceive. Now should everything works.
+* GetOwnedGames now require Ticket and SessionId (soon will be passed as param for OWCon)
+* Deprecate net7.0
+* Remove RestSharp
+* Null check most of places.
+
+--------------------------------------------------------------
+ 0.0.1.2		2024 Jan 31 - May 26
 --------------------------------------------------------------
 * Update from 10872 to 11028
 * Added .net8.0

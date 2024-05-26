@@ -99,10 +99,12 @@ namespace UplayKit.Connection
                 return default(V);
 
             var ds = Formatters.FormatData<V>(down.Push.Data.Data.ToByteArray());
-            Debug.WriteDebug(ds.ToString(), "custom.txt");
 
             if (ds != null)
+            {
+                Debug.WriteDebug(ds.ToString(), $"custom_{ServiceName}.txt");
                 return ds;
+            }
             return default(V);
         }
         #endregion

@@ -29,12 +29,16 @@ namespace UplayKit.Services
             socket.RequestId++;
 
             var rsp = socket.SendReq(ServiceRequest);
-
-            if (rsp == null || !rsp.ServiceRsp.Success)
-            {
+            if (rsp == null || !rsp.ServiceRsp.HasData)
                 return null;
+
+            var ds = Formatters.FormatDataNoLength<Downstream>(rsp.ServiceRsp.Data.ToByteArray());
+            if (ds != null || ds?.Response != null)
+            {
+                Debug.WriteDebug(ds.ToString(), "utility_service.txt");
+                return ds.Response;
             }
-            return Formatters.FormatDataNoLength<Downstream>(rsp.ServiceRsp.Data.ToByteArray()).Response;
+            return null;
         }
         #endregion
         #region Function

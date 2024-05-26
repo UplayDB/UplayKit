@@ -92,10 +92,12 @@ namespace UplayKit.Connection
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-            Debug.WriteDebug(ds.ToString(), "playtime.txt");
 
             if (ds != null || ds?.Response != null)
+            {
+                Debug.WriteDebug(ds.ToString(), "playtime.txt");
                 return ds.Response;
+            }             
             return null;
         }
         #endregion

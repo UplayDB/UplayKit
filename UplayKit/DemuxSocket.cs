@@ -23,12 +23,12 @@ namespace UplayKit
     public class DemuxSocket : SslClient
     {
         #region Fields
-        public event EventHandler<DemuxEventArgs> NewMessage;
+        public event EventHandler<DemuxEventArgs>? NewMessage;
         public uint RequestId { get; internal set; }
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 11028;
+        public uint ClientVersion { get; internal set; } = 11052;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
         /// <summary>
@@ -44,7 +44,6 @@ namespace UplayKit
         uint LengthRemaining = 0;
         bool LengthWaiting;
         byte[]? ReadedOnRec = null;
-        bool Overflow = false;
         #endregion
         #region Basic
 
@@ -59,6 +58,11 @@ namespace UplayKit
         }
         public void Start()
         {
+            // These made for Getting our receive size bigget
+            this.OptionSendBufferLimit = 8192 * 4;
+            this.OptionSendBufferSize = 8192 * 4;
+            this.OptionReceiveBufferLimit = 8192 * 4;
+            this.OptionReceiveBufferSize = 8192 * 4;
             if (Debug.isDebug)
             {
                 Directory.CreateDirectory("SendReq");
@@ -68,94 +72,25 @@ namespace UplayKit
             NewMessage += DemuxSocket_NewMessage;
             var Connected = Connect();
             ReceiveAsync();
-            Debug.PWDebug("DemuxSocket is "  + Connected);
+            Debug.PWDebug("DemuxSocket Connected? "  + Connected);
         }
 
         protected override void OnReceived(byte[] buffer, long offset, long size)
         {
-            Debug.WriteDebug("OnReceived!\n");
+            Debug.WriteDebug("\nOnReceived!");
             Debug.WriteDebug($"Buffer L: {buffer.Length} | Offset : {offset} | Size: {size}");
-            Debug.WriteDebug($"Bytes Sent: {BytesSent} | Bytes sending: {BytesSending} | Bytes Pending {BytesPending} | Bytes Recieved {BytesReceived}");
-            byte[]? _InternalReaded;
-            if (LengthWaiting)
-            {
-                byte[] preReadedOnRec = ReadedOnRec;
-                _InternalReaded = buffer.Take((int)size).ToArray();
-                /*
-                if (LengthRemaining < size)
-                {
-                    Debug.WriteDebug("LengthRemaining < size! Parsing only the remaining!");
-                    _InternalReaded = _InternalReaded.Take((int)LengthRemaining).ToArray();
-                    File.WriteAllBytes("push_msg",buffer[(int)LengthRemaining..size]);
-                }*/
-                ReadedOnRec = ReadedOnRec.Concat(_InternalReaded).ToArray();
-                if (LengthRemaining != _InternalReaded.Length)
-                {
-                    Debug.WriteDebug($"PRE: {LengthRemaining}");
-                    uint pre = LengthRemaining;
-                    LengthWaiting = true;
-                    LengthRemaining -= (uint)_InternalReaded.Length;
-                    Debug.WriteDebug($"POST: {LengthRemaining}");
-                    if (pre < LengthRemaining)
-                    {
-                        Console.WriteLine((int)pre - size);
-                        Console.WriteLine((int)LengthRemaining - _InternalReaded.Length);
-                        Console.WriteLine(Math.Abs((int)LengthRemaining - _InternalReaded.Length));
-                        Console.WriteLine((uint)Math.Abs((int)LengthRemaining - _InternalReaded.Length));
-                        LengthRemaining = (uint)Math.Abs((int)LengthRemaining - _InternalReaded.Length);
-                        Debug.WriteDebug("PRE bytes are BIGGER than remaining! overflow on!");
-                        Debug.WriteDebug($"New: {LengthRemaining}");
+            Debug.WriteDebug($"STATS: Bytes Sent: {BytesSent} | Bytes sending: {BytesSending} | Bytes Pending {BytesPending} | Bytes Recieved {BytesReceived}");
 
-                        File.WriteAllBytes("error_pre_bytes", preReadedOnRec);
-                        File.WriteAllBytes("error_readed_bytes", _InternalReaded);
-                        File.WriteAllBytes("error_post_bytes", ReadedOnRec);
-                        File.WriteAllBytes("error_buffer_rem_size", buffer[(int)pre..(int)size]);
+            byte[] buff = buffer.Take((int)size).ToArray();
 
-                        LengthWaiting = false;
-                        LengthRemaining = 0;
-                        _InternalReaded = ReadedOnRec;
-                        ReadedOnRec = null;
-                    }
-                }
-                else
-                {
-                    Debug.WriteDebug($"Finally readed!");
-                    LengthWaiting = false;
-                    LengthRemaining = 0;
-                    _InternalReaded = ReadedOnRec;
-                    ReadedOnRec = null;
-                }
-            }
-            else
-            {
-                var _InternalReadedLenght = Formatters.FormatLength(BitConverter.ToUInt32(buffer[..4], 0));
-                Debug.WriteDebug($"Should Read: {_InternalReadedLenght} | {BitConverter.ToString(buffer[..4])}");
-                _InternalReaded = buffer.Skip(4).Take((int)_InternalReadedLenght).ToArray();
-                Debug.WriteDebug($"Readed Bytes: {_InternalReaded.Length}");
-                if (_InternalReadedLenght != _InternalReaded.Length)
-                {
-                    LengthWaiting = true;
-                    LengthRemaining = _InternalReadedLenght - (uint)_InternalReaded.Length;
-                    ReadedOnRec = _InternalReaded;
-                }
-                else
-                {
-                    Debug.WriteDebug("No further reading required!");
-                    LengthWaiting = false;
-                    LengthRemaining = 0;
-                    ReadedOnRec = null;
-                }
-            }
-            
-
-
+            // check here if we wants the connection.
             if (!IsWaitingData)
-            { 
+            {
                 //  We are not waiting any data! Therefore must be a push!
                 //  First byte is a Push byte!
-                if (_InternalReaded[0] == 0x12)
+                if (buff[0] == 0x12)
                 {
-                    var downstream = Formatters.FormatDataNoLength<Downstream>(_InternalReaded);
+                    var downstream = Formatters.FormatDataNoLength<Downstream>(buff);
                     CheckTheConnection(downstream);
                     if (downstream != null && downstream.Push.Data != null)
                         NewMessage?.Invoke(this, new DemuxEventArgs(downstream.Push.Data));
@@ -164,17 +99,61 @@ namespace UplayKit
                 }
                 else
                 {
-                    Debug.PWDebug($"Unknown byte! {_InternalReaded[0]}");
+                    Debug.PWDebug($"Unknown byte! {buff[0]}");
                     //Debug.PWDebug($"Unknown byte! {_InternalReaded[0]}   ", "ERROR");
-                    File.WriteAllBytes("Error_Received_Bytes", _InternalReaded);
+                    File.WriteAllBytes("Error_Received_Bytes", buffer);
                 }
             }
-            else if (!LengthWaiting)
+
+            if (!LengthWaiting)
             {
-                InternalReaded = _InternalReaded;
+                var length_to_read = Formatters.FormatLength(BitConverter.ToUInt32(buff[..4], 0));
+                Debug.WriteDebug($"Should Read Length of {length_to_read}");
+                var data = buff.Skip(4).ToArray();
+
+                // The length is same as our data length
+                if (data.Length == length_to_read)
+                {
+                    InternalReaded = data;
+                    ReceiveAsync();
+                    return;
+                }
+                LengthRemaining = length_to_read - (uint)data.Length;
+                ReadedOnRec = data;
+                LengthWaiting = true;
+                Debug.WriteDebug($"More to read! {LengthRemaining}");
+                ReceiveAsync();
+                return;
             }
-            ReceiveAsync();
-            Debug.PWDebug("Ask to recieve sent!");
+
+            // if length is same as remaining we just return with it
+            if (buff.Length == LengthRemaining)
+            {
+                InternalReaded = ReadedOnRec?.Concat(buff).ToArray();
+                LengthWaiting = false;
+                LengthRemaining = 0;
+                ReceiveAsync();
+                return;
+            }
+            else
+            {
+                // ...
+
+                Debug.WriteDebug($"Remaining Currently: {LengthRemaining}");
+                var remain_buff = buff.Take((int)LengthRemaining).ToArray();
+                ReadedOnRec = ReadedOnRec?.Concat(remain_buff).ToArray();
+                var lasted = buff.Skip((int)LengthRemaining).ToArray();
+                LengthRemaining -= (uint)remain_buff.Length;
+                Debug.WriteDebug($"Remaining to read: {LengthRemaining}");        
+                if (lasted.Length > 0)
+                {
+                    File.WriteAllBytes($"RemainingBytes_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}", lasted);
+                    Debug.WriteDebug("REMAININGBYTES: " + lasted.Length);
+                }
+                
+                ReceiveAsync();
+                return;
+            }
         }
 
         protected override void OnDisconnected()
@@ -220,6 +199,7 @@ namespace UplayKit
             ConnectionObject.Add(connectionID, ConnectionObj);
             Debug.PWDebug($"Connection added {ConnectionObj} as ID {connectionID}");
         }
+
         /// <summary>
         /// Remove Connection from Dictionaries
         /// </summary>
@@ -251,7 +231,6 @@ namespace UplayKit
                 CloseMethod.Invoke(ConnectionObject[connectionID], null);
             }
         }
-
         #endregion
         #region Ssl Communication with Demux
 

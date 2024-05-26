@@ -12,7 +12,7 @@ namespace UplayKit.Connection
         public bool isServiceSuccess = false;
         public bool isConnectionClosed = false;
         public static readonly string ServiceName = "ownership_service";
-        public event EventHandler<Push> PushEvent;
+        public event EventHandler<Push>? PushEvent;
         private uint ReqId { get; set; } = 1;
         public OwnershipConnection(DemuxSocket demuxSocket)
         {
@@ -70,6 +70,7 @@ namespace UplayKit.Connection
             isConnectionClosed = true;
             socket.NewMessage -= Socket_NewMessage;
         }
+
         #endregion
         #region Request/Message        
         private void Socket_NewMessage(object? sender, DemuxEventArgs e)
@@ -107,10 +108,12 @@ namespace UplayKit.Connection
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-            Debug.WriteDebug(ds.ToString(), "ownership.txt");
 
             if (ds != null || ds?.Response != null)
+            {
+                Debug.WriteDebug(ds.ToString(), "ownership.txt");
                 return ds.Response;
+            }            
             return null;
         }
         #endregion
@@ -119,7 +122,7 @@ namespace UplayKit.Connection
         /// Initializer
         /// </summary>
         /// <returns></returns>
-        public List<OwnedGame>? GetOwnedGames(bool writeToFile = false)
+        public List<OwnedGame>? GetOwnedGames(string ticket, string sessionId, bool writeToFile = false)
         {
             Req req = new()
             {
@@ -129,7 +132,9 @@ namespace UplayKit.Connection
                     GetAssociations = true,
                     ProtoVersion = 7,
                     UseStaging = socket.TestConfig
-                }
+                },
+                UbiSessionId = sessionId,
+                UbiTicket = ticket
             };
             ReqId += 1;
             var rsp = SendRequest(req);
@@ -406,7 +411,7 @@ namespace UplayKit.Connection
             }
         }
 
-        public SwitchProductBranchRsp? SwitchProductBranch(uint productId, uint branchId, string? password)
+        public SwitchProductBranchRsp? SwitchProductBranch(uint productId, uint branchId, string Ticket, string? password)
         {
             Req req = new()
             {
@@ -417,11 +422,40 @@ namespace UplayKit.Connection
                    {
                        ProductId = productId,
                        BranchId = branchId,
-                   }
-                }
+                   },
+                },
+                UbiTicket = Ticket
             };
             if (password != null)
                 req.SwitchProductBranchReq.SpecifiedBranch.Password = password;
+            ReqId += 1;
+            var rsp = SendRequest(req);
+            if (rsp != null)
+            {
+                isServiceSuccess = (rsp.SwitchProductBranchRsp.Result == SwitchProductBranchRsp.Types.Result.Success);
+                return rsp.SwitchProductBranchRsp;
+            }
+            else
+            {
+                isServiceSuccess = false;
+                return null;
+            }
+        }
+
+        public SwitchProductBranchRsp? SwitchBranchToDefault(uint productId, string Ticket)
+        {
+            Req req = new()
+            {
+                RequestId = ReqId,
+                SwitchProductBranchReq = new()
+                {
+                    DefaultBranch = new()
+                    {
+                        ProductId = productId,
+                    },
+                },
+                UbiTicket = Ticket
+            };
             ReqId += 1;
             var rsp = SendRequest(req);
             if (rsp != null)

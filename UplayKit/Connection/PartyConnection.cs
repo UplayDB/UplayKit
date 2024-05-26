@@ -12,7 +12,7 @@ namespace UplayKit.Connection
         public bool isConnectionClosed = false;
         public static readonly string ServiceName = "party_service";
         private uint Cookie = 0;
-        public event EventHandler<Push> PushEvent;
+        public event EventHandler<Push>? PushEvent;
         private uint ReqId { get; set; } = 1;
         public PartyConnection(DemuxSocket demuxSocket)
         {
@@ -96,10 +96,13 @@ namespace UplayKit.Connection
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-            Debug.WriteDebug(ds.ToString(), "playtime.txt");
+
 
             if (ds != null || ds?.Response != null)
+            {
+                Debug.WriteDebug(ds.ToString(), "party.txt");
                 return ds.Response;
+            }  
             return null;
         }
         private void Socket_NewMessage(object? sender, DemuxEventArgs e)
