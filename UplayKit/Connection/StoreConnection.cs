@@ -38,7 +38,7 @@ namespace UplayKit.Connection
                 }
             };
             var rsp = socket.SendReq(openConnectionReq);
-            storefront = new() { Configuration = "" };
+            storefront = new();
             if (rsp == null)
             {
                 Console.WriteLine("Store Connection cancelled.");
@@ -142,7 +142,7 @@ namespace UplayKit.Connection
             else
             {
                 isServiceSuccess = false;
-                storefront = new() { Configuration = "" };
+                storefront = new();
             }
         }
 

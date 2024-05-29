@@ -1,5 +1,15 @@
 --------------------------------------------------------------
- 0.0.2.0		2024 May 26 -
+ 0.0.2.1		2024 May 29 - 
+--------------------------------------------------------------
+* Fixed issues with the GetURL if you down own the game. (now return string.Empty instead of error)
+* Fixed not checking if the result is connect termination.
+* Added more null returns
+* Removed isServiceSuccess.
+* isConnectionClosed now IsConnectionClosed
+* Ownership now reqire Ticket and SessionId. (you can set or get inside it. [can reflesh])
+
+--------------------------------------------------------------
+ 0.0.2.0		2024 May 26 - May 29
 --------------------------------------------------------------
 * Update from 11028 to 11052
 * Updated Dependecies

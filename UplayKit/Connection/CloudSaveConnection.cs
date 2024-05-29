@@ -8,20 +8,18 @@ namespace UplayKit.Connection
         #region Base
         public uint connectionId;
         public DemuxSocket socket;
-        public bool isServiceSuccess = false;
-        public bool isConnectionClosed = false;
+        public bool IsConnectionClosed = false;
         public static readonly string ServiceName = "cloudsave_service";
         private uint ReqId { get; set; } = 1;
         public CloudSaveConnection(DemuxSocket demuxSocket)
         {
             socket = demuxSocket;
-
             Connect();
         }
 
         public void Reconnect()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 Connect();
         }
         internal void Connect()
@@ -43,14 +41,13 @@ namespace UplayKit.Connection
             }
             else
             {
-                isServiceSuccess = rsp.OpenConnectionRsp.Success;
                 connectionId = rsp.OpenConnectionRsp.ConnectionId;
-                if (isServiceSuccess == true)
+                if (rsp.OpenConnectionRsp.Success)
                 {
                     Console.WriteLine("CloudSave Connection successful");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
-                    isConnectionClosed = false;
+                    IsConnectionClosed = false;
                 }
             }
         }
@@ -62,15 +59,14 @@ namespace UplayKit.Connection
                 Console.WriteLine($"Connection terminated via Socket {ServiceName}");
             }
             socket.RemoveConnection(connectionId);
-            isServiceSuccess = false;
             connectionId = uint.MaxValue;
-            isConnectionClosed = true;
+            IsConnectionClosed = true;
         }
         #endregion
         #region Request
         public Rsp? SendRequest(Req req)
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 return null;
 
             Upstream post = new() { Request = req };
@@ -87,7 +83,7 @@ namespace UplayKit.Connection
             };
 
             var down = socket.SendUpstream(up);
-            if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+            if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
@@ -214,14 +210,6 @@ namespace UplayKit.Connection
 
         public CloudsaveRspV2 GetV2(uint uplayid, string ownershipToken, string ItemName, uint ItemId)
         {
-            CloudsaveReqV2.Types.GetItems.Types.Item item = new()
-            {
-                ItemId = ItemId,
-                ItemName = ItemName
-            };
-
-            CloudsaveReqV2.Types.GetItems Getitem = new();
-            Getitem.Items.Add(item);
             Req getuserinfo = new()
             {
                 RequestId = ReqId + 1,
@@ -229,7 +217,17 @@ namespace UplayKit.Connection
                 {
                     UplayId = uplayid,
                     OwnershipToken = ownershipToken,
-                    GetItems = Getitem,
+                    GetItems =
+                    { 
+                        Items =
+                        {
+                            new CloudsaveReqV2.Types.GetItems.Types.Item()
+                            {
+                                ItemId = ItemId,
+                                ItemName = ItemName
+                            },
+                        }
+                    },
                 }
             };
             var userinforsp = SendRequest(getuserinfo);

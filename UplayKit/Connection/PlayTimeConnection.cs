@@ -15,7 +15,6 @@ namespace UplayKit.Connection
         public PlayTimeConnection(DemuxSocket demuxSocket)
         {
             socket = demuxSocket;
-
             Connect();
         }
 

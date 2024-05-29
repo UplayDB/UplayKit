@@ -8,9 +8,8 @@ namespace UplayKit.Connection
         #region Base
         private uint connectionId;
         private DemuxSocket socket;
-        public bool isServiceSuccess = false;
-        public bool isConnectionClosed = false;
-        public bool initDone = false;
+        public bool IsConnectionClosed = false;
+        public bool InitDone = false;   //  These only exist if you need auth or something to can call other things.
         public static readonly string ServiceName = "download_service";
         private uint ReqId { get; set; } = 1;
         public DownloadConnection(DemuxSocket demuxSocket)
@@ -24,7 +23,7 @@ namespace UplayKit.Connection
         /// </summary>
         public void Reconnect()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 Connect();
         }
         internal void Connect()
@@ -46,14 +45,13 @@ namespace UplayKit.Connection
             }
             else
             {
-                isServiceSuccess = rsp.OpenConnectionRsp.Success;
                 connectionId = rsp.OpenConnectionRsp.ConnectionId;
-                if (isServiceSuccess == true)
+                if (rsp.OpenConnectionRsp.Success)
                 {
                     Console.WriteLine("Download Connection successful.");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
-                    isConnectionClosed = false;
+                    IsConnectionClosed = false;
                 }
             }
         }
@@ -67,15 +65,14 @@ namespace UplayKit.Connection
                 Console.WriteLine($"Connection terminated via Socket {ServiceName}");
             }
             socket.RemoveConnection(connectionId);
-            isServiceSuccess = false;
             connectionId = uint.MaxValue;
-            isConnectionClosed = true;
+            IsConnectionClosed = true;
         }
         #endregion
         #region Request
         public Rsp? SendRequest(Req req)
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 return null;
 
             Upstream post = new() { Request = req };
@@ -92,7 +89,7 @@ namespace UplayKit.Connection
             };
 
             var down = socket.SendUpstream(up);
-            if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+            if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
@@ -120,14 +117,12 @@ namespace UplayKit.Connection
             var initializeRspDownload = SendRequest(initializeReqDownload);
             if (initializeRspDownload != null)
             {
-                isServiceSuccess = initializeRspDownload.InitializeRsp.Ok;
-                initDone = true;
+                InitDone = true;
                 return initializeRspDownload.InitializeRsp.Ok;
             }
             else
             {
-                isServiceSuccess = false;
-                initDone = false;
+                InitDone = false;
                 return false;
             }
         }
@@ -141,10 +136,8 @@ namespace UplayKit.Connection
         /// <returns>Urls or ""</returns>
         public string GetUrl(string manifest, uint productId, string manifestType = "manifest")
         {
-            if (!initDone)
-            {
-                return "";
-            }
+            if (!InitDone)
+                return string.Empty;
 
             Req urlReq = new()
             {
@@ -168,18 +161,17 @@ namespace UplayKit.Connection
             var urlRsp = SendRequest(urlReq);
             if (urlRsp != null)
             {
-                isServiceSuccess = (UrlRsp.Types.Result.Success == urlRsp.UrlRsp.UrlResponses[0].Result);
-                return urlRsp.UrlRsp.UrlResponses[0].DownloadUrls[0].Urls[0].ToString();
+                if (UrlRsp.Types.Result.Success == urlRsp.UrlRsp.UrlResponses[0].Result && urlRsp.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
+                    return urlRsp.UrlRsp.UrlResponses[0].DownloadUrls[0].Urls[0].ToString();
             }
-            else
-            {
-                isServiceSuccess = false;
-                return "";
-            }
+            return string.Empty;
         }
 
         public List<string> GetUrlList(uint productId, List<string> ToRelPath)
         {
+            if (!InitDone)
+                return new();
+
             Req urlReq = new()
             {
                 RequestId = ReqId,
@@ -190,25 +182,19 @@ namespace UplayKit.Connection
                         new UrlReq.Types.Request()
                         {
                             ProductId = productId,
-                            RelativeFilePath = { }
+                            RelativeFilePath = { ToRelPath }
                         }
                     }
                 }
             };
             ReqId++;
-
-            urlReq.UrlReq.UrlRequests[0].RelativeFilePath.Add(ToRelPath);
             var downloadUrls = SendRequest(urlReq);
             if (downloadUrls != null)
             {
-                isServiceSuccess = (UrlRsp.Types.Result.Success == downloadUrls.UrlRsp.UrlResponses[0].Result);
-                return downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.ToList().Select(a => a.Urls[0]).ToList();
+                if (UrlRsp.Types.Result.Success == downloadUrls.UrlRsp.UrlResponses[0].Result && downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
+                    return downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.ToList().Select(a => a.Urls[0]).ToList();
             }
-            else
-            {
-                isServiceSuccess = false;
-                return new List<string>();
-            }
+            return new();
         }
         #endregion
     }

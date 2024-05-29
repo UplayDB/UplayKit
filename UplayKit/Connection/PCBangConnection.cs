@@ -8,8 +8,7 @@ namespace UplayKit.Connection
         #region Base
         public uint connectionId;
         public DemuxSocket socket;
-        public bool isServiceSuccess = false;
-        public bool isConnectionClosed = false;
+        public bool IsConnectionClosed = false;
         public static string ServiceName = "pcbang_service";
         private uint ReqId { get; set; } = 1;
         public PCBangConnection(DemuxSocket demuxSocket)
@@ -21,7 +20,7 @@ namespace UplayKit.Connection
 
         public void Reconnect()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 Connect();
         }
         internal void Connect()
@@ -44,14 +43,13 @@ namespace UplayKit.Connection
             }
             else
             {
-                isServiceSuccess = rsp.OpenConnectionRsp.Success;
                 connectionId = rsp.OpenConnectionRsp.ConnectionId;
-                if (isServiceSuccess == true)
+                if (rsp.OpenConnectionRsp.Success)
                 {
                     Console.WriteLine("Test Connection successful");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
-                    isConnectionClosed = false;
+                    IsConnectionClosed = false;
                 }
             }
         }
@@ -63,15 +61,14 @@ namespace UplayKit.Connection
                 Console.WriteLine($"Connection terminated via Socket {ServiceName}");
             }
             socket.RemoveConnection(connectionId);
-            isServiceSuccess = false;
             connectionId = uint.MaxValue;
-            isConnectionClosed = true;
+            IsConnectionClosed = true;
         }
         #endregion
         #region Request
         public Rsp? SendRequest(Req req)
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 return null;
 
             Upstream post = new() { Request = req };
@@ -88,7 +85,7 @@ namespace UplayKit.Connection
             };
 
             var down = socket.SendUpstream(up);
-            if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+            if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
@@ -102,7 +99,7 @@ namespace UplayKit.Connection
         }
         #endregion
         #region Functions
-        public void Init(string provider)
+        public InitializeRsp? Init(string provider)
         {
             Req req = new()
             {
@@ -116,8 +113,9 @@ namespace UplayKit.Connection
             var rsp = SendRequest(req);
             if (rsp != null)
             {
-                Console.WriteLine(rsp.InitializeRsp);
+                return rsp.InitializeRsp;
             }
+            return null;
         }
         #endregion
     }

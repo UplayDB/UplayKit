@@ -8,20 +8,17 @@ namespace UplayKit.Connection
         #region Base
         private uint connectionId;
         private DemuxSocket socket;
-        public bool isServiceSuccess = false;
-        public bool isConnectionClosed = false;
-        public bool initDone = false;
+        public bool IsConnectionClosed = false;
         public static readonly string ServiceName = "ach_frontend";
         private uint ReqId { get; set; } = 1;
         public AchievementConnection(DemuxSocket demuxSocket)
         {
             socket = demuxSocket;
-
             Connect();
         }
         public void Reconnect()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 Connect();
         }
         internal void Connect()
@@ -43,14 +40,13 @@ namespace UplayKit.Connection
             }
             else
             {
-                isServiceSuccess = rsp.OpenConnectionRsp.Success;
                 connectionId = rsp.OpenConnectionRsp.ConnectionId;
-                if (isServiceSuccess == true)
+                if (rsp.OpenConnectionRsp.Success)
                 {
                     Console.WriteLine("Achievement Connection successful.");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
-                    isConnectionClosed = false;
+                    IsConnectionClosed = false;
                 }
             }
         }
@@ -61,15 +57,14 @@ namespace UplayKit.Connection
                 Console.WriteLine($"Connection terminated via Socket {ServiceName}");
             }
             socket.RemoveConnection(connectionId);
-            isServiceSuccess = false;
             connectionId = uint.MaxValue;
-            isConnectionClosed = true;
+            IsConnectionClosed = true;
         }
         #endregion
         #region Request
         public Rsp? SendRequest(Req req)
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 return null;
 
             Uplay.Demux.Upstream up = new()
@@ -85,7 +80,7 @@ namespace UplayKit.Connection
             };
 
             var down = socket.SendUpstream(up);
-            if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+            if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
                 return null;
 
             var ds = Formatters.FormatData<Rsp>(down.Push.Data.Data.ToByteArray());
@@ -100,7 +95,7 @@ namespace UplayKit.Connection
         }
         #endregion
         #region Functions
-        public void Auth(string token)
+        public bool Auth(string token)
         {
             Req req = new()
             {
@@ -113,14 +108,8 @@ namespace UplayKit.Connection
             ReqId++;
             var rsp = SendRequest(req);
             if (rsp != null)
-            {
-                isServiceSuccess = rsp.AuthenticateRsp.Success;
-                Debug.PWDebug(rsp.AuthenticateRsp.Success);
-            }
-            else
-            {
-                isServiceSuccess = false;
-            }
+                return rsp.AuthenticateRsp.Success;
+            return false;
         }
 
         public List<ProductAchievements> GetAchievements(string userId, string ProductId, string PlatformId)
@@ -141,15 +130,8 @@ namespace UplayKit.Connection
             ReqId++;
             var rsp = SendRequest(req);
             if (rsp != null)
-            {
-                isServiceSuccess = true;
                 return rsp.ReadAchievementsRsp.AchievementBlob.ProductAchievements.ToList();
-            }
-            else
-            {
-                isServiceSuccess = false;
-                return new() { };
-            }
+            return new();
         }
 
         public bool WriteAchievement(List<ProductAchievements> productAchievements)
@@ -167,15 +149,7 @@ namespace UplayKit.Connection
             };
             ReqId++;
             var rsp = SendRequest(req);
-            if (rsp != null)
-            {
-                isServiceSuccess = true;
-            }
-            else
-            {
-                isServiceSuccess = false;
-            }
-            return isServiceSuccess;
+            return rsp != null;
         }
         #endregion
     }

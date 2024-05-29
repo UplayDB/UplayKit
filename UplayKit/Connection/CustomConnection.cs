@@ -7,10 +7,8 @@ namespace UplayKit.Connection
         #region Base
         private uint connectionId;
         private DemuxSocket socket;
-        public bool isServiceSuccess = false;
-        public bool isConnectionClosed = false;
-        public bool initDone = false;
-        public static string ServiceName = "";
+        public bool IsConnectionClosed = false;
+        public string ServiceName = "";
         public uint ReqId { get; set; } = 1;
         public CustomConnection(string serviceName, DemuxSocket demuxSocket)
         {
@@ -24,7 +22,7 @@ namespace UplayKit.Connection
         /// </summary>
         public void Reconnect()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 Connect();
         }
 
@@ -47,14 +45,13 @@ namespace UplayKit.Connection
             }
             else
             {
-                isServiceSuccess = rsp.OpenConnectionRsp.Success;
                 connectionId = rsp.OpenConnectionRsp.ConnectionId;
-                if (isServiceSuccess == true)
+                if (rsp.OpenConnectionRsp.Success)
                 {
                     Console.WriteLine("Custom Connection successful.");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
-                    isConnectionClosed = false;
+                    IsConnectionClosed = false;
                 }
             }
         }
@@ -69,9 +66,8 @@ namespace UplayKit.Connection
                 Console.WriteLine($"Connection terminated via Socket {ServiceName}");
             }
             socket.RemoveConnection(connectionId);
-            isServiceSuccess = false;
             connectionId = uint.MaxValue;
-            isConnectionClosed = true;
+            IsConnectionClosed = true;
         }
         #endregion
         #region Request
@@ -79,7 +75,7 @@ namespace UplayKit.Connection
             where V : IMessage<V>, new()
             where T : IMessage<T>, new()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 return default(V);
 
             Uplay.Demux.Upstream up = new()
@@ -95,7 +91,7 @@ namespace UplayKit.Connection
             };
 
             var down = socket.SendUpstream(up);
-            if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+            if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
                 return default(V);
 
             var ds = Formatters.FormatData<V>(down.Push.Data.Data.ToByteArray());

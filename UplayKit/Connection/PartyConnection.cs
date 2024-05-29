@@ -8,8 +8,7 @@ namespace UplayKit.Connection
         #region Base
         public uint connectionId;
         public DemuxSocket socket;
-        public bool isServiceSuccess = false;
-        public bool isConnectionClosed = false;
+        public bool IsConnectionClosed = false;
         public static readonly string ServiceName = "party_service";
         private uint Cookie = 0;
         public event EventHandler<Push>? PushEvent;
@@ -23,7 +22,7 @@ namespace UplayKit.Connection
 
         public void Reconnect()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 Connect();
         }
         internal void Connect()
@@ -46,15 +45,14 @@ namespace UplayKit.Connection
             }
             else
             {
-                isServiceSuccess = rsp.OpenConnectionRsp.Success;
                 connectionId = rsp.OpenConnectionRsp.ConnectionId;
-                if (isServiceSuccess == true)
+                if (rsp.OpenConnectionRsp.Success)
                 {
                     Console.WriteLine("Party Connection successful");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
                     socket.NewMessage += Socket_NewMessage;
-                    isConnectionClosed = false;
+                    IsConnectionClosed = false;
                 }
             }
         }
@@ -67,15 +65,14 @@ namespace UplayKit.Connection
             }
             socket.RemoveConnection(connectionId);
             socket.NewMessage -= Socket_NewMessage;
-            isServiceSuccess = false;
             connectionId = uint.MaxValue;
-            isConnectionClosed = true;
+            IsConnectionClosed = true;
         }
         #endregion
         #region Request
         public Rsp? SendRequest(Req req)
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 return null;
 
             Upstream post = new() { Request = req };
@@ -92,7 +89,7 @@ namespace UplayKit.Connection
             };
 
             var down = socket.SendUpstream(up);
-            if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+            if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
@@ -119,7 +116,7 @@ namespace UplayKit.Connection
         }
         #endregion
         #region Functions
-        public void StartSession(uint cookie = 0)
+        public StartSessionRsp? StartSession(uint cookie = 0)
         {
             StartSessionReq session = new();
 
@@ -137,15 +134,10 @@ namespace UplayKit.Connection
             var rsp = SendRequest(req);
             if (rsp != null)
             {
-                isServiceSuccess = true;
                 Cookie = rsp.StartSessionRsp.Cookie;
-                Debug.PWDebug(rsp.StartSessionRsp);
+                return rsp.StartSessionRsp;
             }
-            else
-            {
-                isServiceSuccess = false;
-            }
-
+            return null;
         }
         #endregion
     }

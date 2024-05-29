@@ -8,8 +8,7 @@ namespace UplayKit.Connection
         #region Base
         public uint connectionId;
         public DemuxSocket socket;
-        public bool isServiceSuccess = false;
-        public bool isConnectionClosed = false;
+        public bool IsConnectionClosed = false;
         public List<Friend> Friends;
         public List<Friend> Friends_Send;
         public List<Friend> Friends_Received;
@@ -27,7 +26,7 @@ namespace UplayKit.Connection
 
         public void Reconnect()
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 Connect();
         }
         internal void Connect()
@@ -52,15 +51,14 @@ namespace UplayKit.Connection
             }
             else
             {
-                isServiceSuccess = rsp.OpenConnectionRsp.Success;
                 connectionId = rsp.OpenConnectionRsp.ConnectionId;
-                if (isServiceSuccess == true)
+                if (rsp.OpenConnectionRsp.Success)
                 {
                     Console.WriteLine("Friends Connection successful");
                     socket.AddToObj(connectionId, this);
                     socket.AddToDict(connectionId, ServiceName);
                     socket.NewMessage += Socket_NewMessage;
-                    isConnectionClosed = false;
+                    IsConnectionClosed = false;
                 }
             }
         }
@@ -71,16 +69,15 @@ namespace UplayKit.Connection
                 Console.WriteLine($"Connection terminated via Socket {ServiceName}");
             }
             socket.RemoveConnection(connectionId);
-            isServiceSuccess = false;
             connectionId = uint.MaxValue;
-            isConnectionClosed = true;
+            IsConnectionClosed = true;
             socket.NewMessage -= Socket_NewMessage;
         }
         #endregion
         #region Request/Message
         public Rsp? SendRequest(Req req)
         {
-            if (isConnectionClosed)
+            if (IsConnectionClosed)
                 return null;
 
             Upstream post = new() { Request = req };
@@ -97,7 +94,7 @@ namespace UplayKit.Connection
             };
 
             var down = socket.SendUpstream(up);
-            if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+            if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
                 return null;
 
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
@@ -165,15 +162,9 @@ namespace UplayKit.Connection
                             break;
                     }
                 }
-                isServiceSuccess = rsp.InitializeRsp.Success;
                 return rsp.InitializeRsp.Success;
             }
-            else
-            {
-                isServiceSuccess = false;
-                return false;
-            }
-
+            return false;
         }
 
         public void AcceptAll()
@@ -192,12 +183,7 @@ namespace UplayKit.Connection
                 var rsp = SendRequest(req);
                 if (rsp != null)
                 {
-                    isServiceSuccess = rsp.AcceptFriendshipRsp.Ok;
                     Console.WriteLine(friend.NameOnPlatform + " Is Accepted? " + rsp.AcceptFriendshipRsp.Ok);
-                }
-                else
-                {
-                    isServiceSuccess = false;
                 }
             }
         }
@@ -216,14 +202,9 @@ namespace UplayKit.Connection
             var rsp = SendRequest(req);
             if (rsp != null)
             {
-                isServiceSuccess = rsp.SetActivityStatusRsp.Success;
                 return rsp.SetActivityStatusRsp.Success;
             }
-            else
-            {
-                isServiceSuccess = false;
-                return false;
-            }
+            return false;
         }
 
         public bool SetGame(uint productId, string productname)
@@ -244,14 +225,9 @@ namespace UplayKit.Connection
             var rsp = SendRequest(req);
             if (rsp != null)
             {
-                isServiceSuccess = rsp.SetGameRsp.Success;
                 return rsp.SetGameRsp.Success;
             }
-            else
-            {
-                isServiceSuccess = false;
-                return false;
-            }
+            return false;
         }
         public bool SetEmptyGame()
         {
@@ -266,23 +242,12 @@ namespace UplayKit.Connection
             var rsp = SendRequest(req);
             if (rsp != null)
             {
-                isServiceSuccess = rsp.SetGameRsp.Success;
                 return rsp.SetGameRsp.Success;
             }
-            else
-            {
-                isServiceSuccess = false;
-                return false;
-            }
+            return false;
         }
-        public void SetRichPresence(uint productId, string key, string val)
+        public bool SetRichPresence(uint productId, string key, string val)
         {
-
-            RichPresenceTokenPair richPresenceToken = new()
-            {
-                Key = key,
-                Val = val
-            };
             Req req = new()
             {
                 RequestId = ReqId,
@@ -292,7 +257,14 @@ namespace UplayKit.Connection
                     {
                         PresenceId = 1,
                         ProductId = productId,
-                        PresenceTokens = { richPresenceToken }
+                        PresenceTokens = 
+                        {
+                            new RichPresenceTokenPair()
+                            {
+                                Key = key,
+                                Val = val
+                            }
+                        }
                     }
                 }
             };
@@ -301,12 +273,9 @@ namespace UplayKit.Connection
             var rsp = SendRequest(req);
             if (rsp != null)
             {
-                isServiceSuccess = rsp.SetRichPresenceRsp.Success;
+                return rsp.SetRichPresenceRsp.Success;
             }
-            else
-            {
-                isServiceSuccess = false;
-            }
+            return false;
         }
         #endregion
     }

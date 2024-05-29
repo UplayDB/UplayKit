@@ -256,7 +256,7 @@ namespace UplayKit
                 IsWaitingData = false;
                 var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
                 InternalReaded = null;
-                if (downstream?.Response != null)
+                if (downstream?.Response != null && !CheckTheConnection(downstream))
                 {
                     Debug.WriteText(downstream.Response.ToString(), $"SendReq/{req.RequestId}_rsp.txt");
                     return downstream.Response;
@@ -288,8 +288,9 @@ namespace UplayKit
                 IsWaitingData = false;
                 var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
                 InternalReaded = null;
-                if (downstream != null)
+                if (downstream != null && !CheckTheConnection(downstream))
                 {
+                    
                     Debug.WriteText(downstream.ToString(), $"SendUpstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_down.txt");
                     return downstream;
                 }
@@ -340,7 +341,7 @@ namespace UplayKit
             }
         }
 
-        public void CheckTheConnection(Downstream? downstream)
+        public bool CheckTheConnection(Downstream? downstream)
         {
             if (downstream?.Push != null)
             {
@@ -350,14 +351,17 @@ namespace UplayKit
                     {
                         Console.WriteLine("Connection closed");
                         TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
+                        return true;
                     }
                     if (downstream.Push.ClientOutdated != null)
                     {
                         Console.WriteLine("Your Client is Outdated!");
                         TerminateConnection(0);
+                        return true;
                     }
                 }
             }
+            return false;
         }
         #endregion
     }
