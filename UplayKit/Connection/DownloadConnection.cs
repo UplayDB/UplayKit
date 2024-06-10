@@ -11,6 +11,7 @@ namespace UplayKit.Connection
         public bool IsConnectionClosed = false;
         public bool InitDone = false;   //  These only exist if you need auth or something to can call other things.
         public static readonly string ServiceName = "download_service";
+        public string NetworkId = string.Empty;
         private uint ReqId { get; set; } = 1;
         public DownloadConnection(DemuxSocket demuxSocket)
         {
@@ -109,7 +110,36 @@ namespace UplayKit.Connection
             {
                 InitializeReq = new()
                 {
-                    OwnershipToken = ownershipToken
+                    OwnershipToken = ownershipToken,
+                    NetworkId = NetworkId
+                },
+                RequestId = ReqId
+            };
+            ReqId++;
+            var initializeRspDownload = SendRequest(initializeReqDownload);
+            if (initializeRspDownload != null)
+            {
+                InitDone = true;
+                return initializeRspDownload.InitializeRsp.Ok;
+            }
+            else
+            {
+                InitDone = false;
+                return false;
+            }
+        }
+
+        public bool InitDownloadSignature(string signature, uint branchId, ulong exp, uint productId)
+        {
+            Req initializeReqDownload = new()
+            {
+                InitializeReq = new()
+                {
+                    Signature = signature,
+                    BranchId = branchId,
+                    Expiration = exp,
+                    ProductId = productId,
+                    NetworkId = NetworkId
                 },
                 RequestId = ReqId
             };

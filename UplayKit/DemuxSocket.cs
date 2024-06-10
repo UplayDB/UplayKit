@@ -28,7 +28,7 @@ namespace UplayKit
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 11052;
+        public uint ClientVersion { get; internal set; } = 11069;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
         /// <summary>
@@ -65,14 +65,14 @@ namespace UplayKit
             this.OptionReceiveBufferSize = 8192 * 4;
             if (Debug.isDebug)
             {
-                Directory.CreateDirectory("SendReq");
-                Directory.CreateDirectory("SendUpstream");
+                Directory.CreateDirectory("SendReqRsp");
+                Directory.CreateDirectory("SendUpDownstream");
                 Context.CertificateValidationCallback = (object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) => true;
             }
             NewMessage += DemuxSocket_NewMessage;
-            var Connected = Connect();
+            Connect();
             ReceiveAsync();
-            Debug.PWDebug("DemuxSocket Connected? "  + Connected);
+            Debug.PWDebug("DemuxSocket Connected? "  + this.IsConnected);
         }
 
         protected override void OnReceived(byte[] buffer, long offset, long size)
@@ -242,7 +242,7 @@ namespace UplayKit
         /// <exception cref="Exception">If the Response Length from Response is 0</exception>
         public Rsp? SendReq(Req req)
         {
-            Debug.WriteText(req.ToString(), $"SendReq/{req.RequestId}_req.txt");
+            Debug.WriteText(req.ToString(), $"SendReqRsp/{req.RequestId}_req.txt");
             Upstream post = new() { Request = req };
             var up = Formatters.FormatUpstream(post.ToByteArray());
             IsWaitingData = true;
@@ -258,7 +258,7 @@ namespace UplayKit
                 InternalReaded = null;
                 if (downstream?.Response != null && !CheckTheConnection(downstream))
                 {
-                    Debug.WriteText(downstream.Response.ToString(), $"SendReq/{req.RequestId}_rsp.txt");
+                    Debug.WriteText(downstream.Response.ToString(), $"SendReqRsp/{req.RequestId}_rsp.txt");
                     return downstream.Response;
                 }
             }
@@ -274,7 +274,7 @@ namespace UplayKit
         /// <exception cref="Exception">If the Response Length from Response is 0</exception>
         public Downstream? SendUpstream(Upstream up)
         {
-            Debug.WriteText(up.ToString(), $"SendUpstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_up.txt");
+            Debug.WriteText(up.ToString(), $"SendUpDownstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_up.txt");
             var upbytes = Formatters.FormatUpstream(up.ToByteArray());
             Debug.PWDebug("[SendUpstream] We sent our Upstream!");
             long sentBytes = Send(upbytes);
@@ -291,7 +291,7 @@ namespace UplayKit
                 if (downstream != null && !CheckTheConnection(downstream))
                 {
                     
-                    Debug.WriteText(downstream.ToString(), $"SendUpstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_down.txt");
+                    Debug.WriteText(downstream.ToString(), $"SendUpDownstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_down.txt");
                     return downstream;
                 }
             }

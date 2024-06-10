@@ -1,5 +1,13 @@
 --------------------------------------------------------------
- 0.0.2.1		2024 May 29 - 
+ 0.0.2.1		2024 Jun 10 - 
+--------------------------------------------------------------
+* Update from 11052 to 11069
+* Added SignOwneship
+* Added RegisterOwnership
+* Added InitDownloadSignature
+
+--------------------------------------------------------------
+ 0.0.2.1		2024 May 29 - 2024 Jun 10
 --------------------------------------------------------------
 * Fixed issues with the GetURL if you down own the game. (now return string.Empty instead of error)
 * Fixed not checking if the result is connect termination.
