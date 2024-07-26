@@ -28,7 +28,7 @@ namespace UplayKit
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 11069;
+        public uint ClientVersion { get; internal set; } = 11098;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
         /// <summary>
@@ -65,6 +65,7 @@ namespace UplayKit
             this.OptionReceiveBufferSize = 8192 * 4;
             if (Debug.isDebug)
             {
+                Directory.CreateDirectory("DebugConnections");
                 Directory.CreateDirectory("SendReqRsp");
                 Directory.CreateDirectory("SendUpDownstream");
                 Context.CertificateValidationCallback = (object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) => true;

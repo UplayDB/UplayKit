@@ -78,6 +78,7 @@ namespace UplayKit.Connection
             if (IsConnectionClosed)
                 return default(V);
 
+            Debug.WriteDebug(post.ToString(), $"DebugConnections/custom_{ServiceName}_req.txt");
             Uplay.Demux.Upstream up = new()
             {
                 Push = new()
@@ -98,7 +99,7 @@ namespace UplayKit.Connection
 
             if (ds != null)
             {
-                Debug.WriteDebug(ds.ToString(), $"custom_{ServiceName}.txt");
+                Debug.WriteDebug(ds.ToString(), $"DebugConnections/custom_{ServiceName}_rsp.txt");
                 return ds;
             }
             return default(V);

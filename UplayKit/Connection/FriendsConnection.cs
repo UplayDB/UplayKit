@@ -80,6 +80,7 @@ namespace UplayKit.Connection
             if (IsConnectionClosed)
                 return null;
 
+            Debug.WriteDebug(req.ToString(), "DebugConnections/friends_req.txt");
             Upstream post = new() { Request = req };
             Uplay.Demux.Upstream up = new()
             {
@@ -101,7 +102,7 @@ namespace UplayKit.Connection
 
             if (ds != null || ds?.Response != null)
             {
-                Debug.WriteDebug(ds.ToString(), "friends.txt");
+                Debug.WriteDebug(ds.ToString(), "DebugConnections/friends_rsp.txt");
                 return ds.Response;
             }
             return null;

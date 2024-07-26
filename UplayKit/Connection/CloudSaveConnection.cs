@@ -69,6 +69,7 @@ namespace UplayKit.Connection
             if (IsConnectionClosed)
                 return null;
 
+            Debug.WriteDebug(req.ToString(), "DebugConnections/cloudsave_req.txt");
             Upstream post = new() { Request = req };
             Uplay.Demux.Upstream up = new()
             {
@@ -89,7 +90,7 @@ namespace UplayKit.Connection
             var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
             if (ds != null || ds?.Response != null)
             {
-                Debug.WriteDebug(ds.ToString(), "cloudsave.txt");
+                Debug.WriteDebug(ds.ToString(), "DebugConnections/cloudsave_rsp.txt");
                 return ds.Response;
             }
             return null;

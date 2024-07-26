@@ -75,7 +75,7 @@ namespace UplayKit.Connection
         {
             if (IsConnectionClosed)
                 return null;
-
+            Debug.WriteDebug(req.ToString(), "DebugConnections/download_req.txt");
             Upstream post = new() { Request = req };
             Uplay.Demux.Upstream up = new()
             {
@@ -97,7 +97,7 @@ namespace UplayKit.Connection
 
             if (ds != null || ds?.Response != null)
             {
-                Debug.WriteDebug(ds.ToString(), "download.txt");
+                Debug.WriteDebug(ds.ToString(), "DebugConnections/download_rsp.txt");
                 return ds.Response;
             }
             return null;

@@ -92,6 +92,7 @@ namespace UplayKit.Connection
             if (isConnectionClosed)
                 return null;
 
+            Debug.WriteDebug(req.ToString(), "DebugConnections/store_req.txt");
             Upstream post = new() { Request = req };
             Uplay.Demux.Upstream up = new()
             {
@@ -113,7 +114,7 @@ namespace UplayKit.Connection
 
             if (ds != null || ds?.Response != null)
             {
-                Debug.WriteDebug(ds.ToString(), "store.txt");
+                Debug.WriteDebug(ds.ToString(), "DebugConnections/playtime_rsp.txt");
                 return ds.Response;
             }  
             return null;

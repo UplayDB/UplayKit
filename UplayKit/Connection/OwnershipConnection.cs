@@ -89,7 +89,7 @@ namespace UplayKit.Connection
         {
             if (IsConnectionClosed)
                 return null;
-
+            Debug.WriteDebug(req.ToString(), "DebugConnections/ownership_req.txt");
             Upstream post = new() { Request = req };
             Uplay.Demux.Upstream up = new()
             {
@@ -111,7 +111,7 @@ namespace UplayKit.Connection
 
             if (ds != null || ds?.Response != null)
             {
-                Debug.WriteDebug(ds.ToString(), "ownership.txt");
+                Debug.WriteDebug(ds.ToString(), "DebugConnections/ownership_rsp.txt");
                 return ds.Response;
             }            
             return null;

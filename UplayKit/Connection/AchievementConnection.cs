@@ -67,6 +67,7 @@ namespace UplayKit.Connection
             if (IsConnectionClosed)
                 return null;
 
+            Debug.WriteDebug(req.ToString(), "DebugConnections/ach_req.txt");
             Uplay.Demux.Upstream up = new()
             {
                 Push = new()
@@ -88,7 +89,7 @@ namespace UplayKit.Connection
 
             if (ds != null)
             {
-                Debug.WriteDebug(ds.ToString(), "ach.txt");
+                Debug.WriteDebug(ds.ToString(), "DebugConnections/ach_rsp.txt");
                 return ds;
             }  
             return null;
