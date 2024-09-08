@@ -28,7 +28,7 @@ namespace UplayKit
         public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
         public static int ConnectionPort { get; internal set; } = 443;
         public int WaitInTimeMS = 10;
-        public uint ClientVersion { get; internal set; } = 11098;
+        public uint ClientVersion { get; internal set; } = 11124;
         public bool TestConfig { get; set; } = false;
         public uint TerminateConnectionId { get; set; } = 0;
         /// <summary>
