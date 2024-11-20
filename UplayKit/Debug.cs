@@ -1,53 +1,52 @@
-﻿namespace UplayKit
+﻿namespace UplayKit;
+
+public class Debug
 {
-    public class Debug
+    public static bool isDebug = false;
+    public static void PWDebug(object obj)
     {
-        public static bool isDebug = false;
-        public static void PWDebug(object obj)
+        if (isDebug == true && obj != null)
         {
-            if (isDebug == true && obj != null)
-            {
-                Console.WriteLine(obj.ToString());
-                WriteDebug(obj.ToString());
-            }
+            Console.WriteLine(obj.ToString());
+            WriteDebug(obj.ToString());
         }
-        public static void PWDebug(object obj, string logname)
+    }
+    public static void PWDebug(object obj, string logname)
+    {
+        if (isDebug == true)
         {
-            if (isDebug == true)
-            {
-                Console.WriteLine(obj.ToString());
-                WriteDebug(obj.ToString(), logname);
-            }
+            Console.WriteLine(obj.ToString());
+            WriteDebug(obj.ToString(), logname);
         }
-        public static void PrintDebug(object obj)
+    }
+    public static void PrintDebug(object obj)
+    {
+        if (isDebug == true)
         {
-            if (isDebug == true)
-            {
-                Console.WriteLine(obj.ToString());
-            }
+            Console.WriteLine(obj.ToString());
         }
+    }
 
-        public static void WriteDebug(string? strLog, string logname = "debug.txt")
+    public static void WriteDebug(string? strLog, string logname = "debug.txt")
+    {
+        if (isDebug == true && strLog != null)
         {
-            if (isDebug == true && strLog != null)
-            {
-                File.AppendAllText(logname, strLog + "\n");
-            }
+            File.AppendAllText(logname, strLog + "\n");
         }
+    }
 
-        public static void WriteBytes(byte[] bytes, string logname = "debug.txt")
+    public static void WriteBytes(byte[] bytes, string logname = "debug.txt")
+    {
+        if (isDebug == true)
         {
-            if (isDebug == true)
-            {
-                File.WriteAllBytes(logname, bytes);
-            }
+            File.WriteAllBytes(logname, bytes);
         }
-        public static void WriteText(string text, string logname = "debug.txt")
+    }
+    public static void WriteText(string text, string logname = "debug.txt")
+    {
+        if (isDebug == true)
         {
-            if (isDebug == true)
-            {
-                File.WriteAllText(logname, text);
-            }
+            File.WriteAllText(logname, text);
         }
     }
 }
