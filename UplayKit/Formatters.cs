@@ -3,9 +3,9 @@ using System.Reflection.Metadata;
 
 namespace UplayKit;
 
-public class Formatters
+public static class Formatters
 {
-    public static string FormatFileSize(ulong lsize)
+    public static string FormatFileSize(this ulong lsize)
     {
         double size = lsize;
         int index = 0;
@@ -14,16 +14,17 @@ public class Formatters
         return size.ToString("0.000 " + new[] { "B", "KB", "MB", "GB", "TB" }[index]);
     }
 
-    public static byte[] FormatUpstream(byte[] rawMessage)
+    public static byte[] FormatUpstream(this ReadOnlySpan<byte> rawMessage)
     {
-        BlobWriter blobWriter = new(4);
+        BlobWriter blobWriter = new(4 + rawMessage.Length);
         blobWriter.WriteUInt32BE((uint)rawMessage.Length);
-        var returner = blobWriter.ToArray().Concat(rawMessage).ToArray();
+        blobWriter.WriteBytes(rawMessage.ToArray());
+        var returner = blobWriter.ToArray();
         blobWriter.Clear();
         return returner;
     }
 
-    public static uint FormatLength(uint length)
+    public static uint FormatLength(this uint length)
     {
         BlobWriter blobWriter = new(4);
         blobWriter.WriteUInt32BE(length);
@@ -32,34 +33,34 @@ public class Formatters
         return returner;
     }
 
-
-    public static char FormatSliceHashChar(string sliceId)
+    public static char FormatSliceHashChar(this string sliceId)
     {
         char[] base32 = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v' };
         byte reversedValue = byte.Parse($"{sliceId[1]}{sliceId[0]}", System.Globalization.NumberStyles.HexNumber);
-        bool isEven = reversedValue % 2 == 0;
         int offset = (int)Math.Floor((decimal)reversedValue / 16);
-        int halfOffset = isEven ? 0 : 16;
+        int halfOffset = reversedValue % 2 == 0 ? 0 : 16;
         return base32[offset + halfOffset];
     }
 
-    public static T? FormatData<T>(byte[] bytes) where T : IMessage<T>, new()
+    /// <summary>
+    /// Formating <paramref name="bytes"/> to any Protobuf message with a Length before the message
+    /// </summary>
+    /// <typeparam name="T">Any IMessage</typeparam>
+    /// <param name="bytes">The Bytes</param>
+    /// <returns>The type if can be parsed or Null/Default</returns>
+    public static T? FormatData<T>(this ReadOnlySpan<byte> bytes) where T : IMessage<T>, new()
     {
         try
         {
-            if (bytes == null)
+            if (bytes.IsEmpty)
                 return default;
 
-            byte[] buffer = new byte[4];
-
-            using var ms = new MemoryStream(bytes);
-            ms.Read(buffer, 0, 4);
-            var responseLength = FormatLength(BitConverter.ToUInt32(buffer, 0));
+            var responseLength = FormatLength(BitConverter.ToUInt32(bytes.Slice(0, 4)));
             if (responseLength == 0)
                 return default;
 
             MessageParser<T> parser = new(() => new T());
-            return parser.ParseFrom(ms);
+            return parser.ParseFrom(bytes.Slice(4, (int)responseLength));
         }
         catch (Exception ex)
         {
@@ -68,11 +69,17 @@ public class Formatters
         }
     }
 
-    public static T? FormatDataNoLength<T>(byte[] bytes) where T : IMessage<T>, new()
+    /// <summary>
+    /// Formating <paramref name="bytes"/> to any Protobuf message
+    /// </summary>
+    /// <typeparam name="T">Any IMessage</typeparam>
+    /// <param name="bytes">The Bytes</param>
+    /// <returns>The type if can be parsed or Null/Default</returns>
+    public static T? FormatDataNoLength<T>(this ReadOnlySpan<byte> bytes) where T : IMessage<T>, new()
     {
         try
         {
-            if (bytes == null)
+            if (bytes.IsEmpty)
                 return default;
 
             MessageParser<T> parser = new(() => new T());

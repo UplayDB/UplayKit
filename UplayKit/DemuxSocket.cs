@@ -38,7 +38,14 @@ public class DemuxSocket : SslClient
     /// Connection Dictionary for the whole Connection (this)
     /// </summary>
     public Dictionary<uint, object> ConnectionObject = new();
-    bool IsWaitingData;
+
+    private bool IsUserRequest;
+    private ArraySegment<byte> Buffer;
+    private ArraySegment<byte> NonWaitingBuffer;
+    private bool IsWaitingForMore;
+    private uint WaitingLen;
+
+    // todo remove:
     byte[]? InternalReaded = null;
     uint LengthRemaining = 0;
     bool LengthWaiting;
@@ -74,60 +81,77 @@ public class DemuxSocket : SslClient
         ReceiveAsync();
         Debug.PWDebug("DemuxSocket Connected? "  + this.IsConnected);
     }
-
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
         Debug.WriteDebug("\nOnReceived!");
         Debug.WriteDebug($"Buffer L: {buffer.Length} | Offset : {offset} | Size: {size}");
         Debug.WriteDebug($"STATS: Bytes Sent: {BytesSent} | Bytes sending: {BytesSending} | Bytes Pending {BytesPending} | Bytes Recieved {BytesReceived}");
 
-        byte[] buff = buffer.Take((int)size).ToArray();
+        ArraySegment<byte> buff = buffer.Take((int)size).ToArray();
 
         // check here if we wants the connection.
-        if (!IsWaitingData)
+        if (!IsUserRequest)
         {
             //  We are not waiting any data! Therefore must be a push!
             //  First byte is a Push byte!
             if (buff[0] == 0x12)
             {
-                var downstream = Formatters.FormatDataNoLength<Downstream>(buff);
-                CheckTheConnection(downstream);
-                if (downstream != null && downstream.Push.Data != null)
-                    NewMessage?.Invoke(this, new DemuxEventArgs(downstream.Push.Data));
-                if (downstream != null && downstream.Push.KeepAlive != null)
-                    this.KeepAlivePush();
+                NonUserRequest(Formatters.FormatDataNoLength<Downstream>(buff));
+
+            }
+            else if (buff.Count > 4) // this means we have a length
+            {
+                NonUserRequest(Formatters.FormatData<Downstream>(buff));
+
+                Debug.PWDebug("Remaining buffer count: " + buff.Count);
+                File.WriteAllBytes("Error_Remaining_Buff", buff.ToArray());
+                File.WriteAllBytes("Error_Remaining_Bytes", buffer);
             }
             else
             {
                 Debug.PWDebug($"Unknown byte! {buff[0]}");
                 //Debug.PWDebug($"Unknown byte! {_InternalReaded[0]}   ", "ERROR");
+                File.WriteAllBytes("Error_Received_Buff", buff.ToArray());
                 File.WriteAllBytes("Error_Received_Bytes", buffer);
             }
         }
 
-        if (!LengthWaiting)
+        if (!IsWaitingForMore)
         {
-            var length_to_read = Formatters.FormatLength(BitConverter.ToUInt32(buff[..4], 0));
-            Debug.WriteDebug($"Should Read Length of {length_to_read}");
-            var data = buff.Skip(4).ToArray();
-
-            // The length is same as our data length
-            if (data.Length == length_to_read)
+            var length_to_read = Formatters.FormatLength(BitConverter.ToUInt32(buff.Slice(0, 4)));
+            Debug.PWDebug($"Should Read Length of {length_to_read}");
+            Buffer = buff.Slice(4, 0);
+            if (Buffer.Count == length_to_read)
             {
-                InternalReaded = data;
+                IsWaitingForMore = false;
                 ReceiveAsync();
                 return;
             }
-            LengthRemaining = length_to_read - (uint)data.Length;
-            ReadedOnRec = data;
-            LengthWaiting = true;
-            Debug.WriteDebug($"More to read! {LengthRemaining}");
+            IsWaitingForMore = true;
+            WaitingLen = length_to_read - (uint)Buffer.Count;
+            Debug.WriteDebug($"More to read! {WaitingLen}");
             ReceiveAsync();
             return;
         }
 
+        if (buff.Count == WaitingLen)
+        {
+            // Todo make sure this works
+            buff.CopyTo(Buffer);
+            InternalReaded = ReadedOnRec?.Concat(buff).ToArray();
+            IsWaitingForMore = false;
+            WaitingLen = 0;
+            ReceiveAsync();
+            return;
+        }
+        else
+        {
+
+        }
+
+
         // if length is same as remaining we just return with it
-        if (buff.Length == LengthRemaining)
+        if (buff.Count == LengthRemaining)
         {
             InternalReaded = ReadedOnRec?.Concat(buff).ToArray();
             LengthWaiting = false;
@@ -154,6 +178,15 @@ public class DemuxSocket : SslClient
             ReceiveAsync();
             return;
         }
+    }
+
+    private void NonUserRequest(Downstream? downstream)
+    {
+        CheckTheConnection(downstream);
+        if (downstream != null && downstream.Push.Data != null)
+            NewMessage?.Invoke(this, new DemuxEventArgs(downstream.Push.Data));
+        if (downstream != null && downstream.Push.KeepAlive != null)
+            this.KeepAlivePush();
     }
 
     protected override void OnDisconnected()
@@ -245,7 +278,7 @@ public class DemuxSocket : SslClient
         Debug.WriteText(req.ToString(), $"SendReqRsp/{req.RequestId}_req.txt");
         Upstream post = new() { Request = req };
         var up = Formatters.FormatUpstream(post.ToByteArray());
-        IsWaitingData = true;
+        IsUserRequest = true;
         long sentBytes = Send(up);
         if (sentBytes == up.Length)
         {
@@ -253,7 +286,7 @@ public class DemuxSocket : SslClient
             {
                 Thread.Sleep(WaitInTimeMS);
             }
-            IsWaitingData = false;
+            IsUserRequest = false;
             var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
             InternalReaded = null;
             if (downstream?.Response != null && !CheckTheConnection(downstream))
@@ -262,7 +295,7 @@ public class DemuxSocket : SslClient
                 return downstream.Response;
             }
         }
-        IsWaitingData = false;
+        IsUserRequest = false;
         return null;
     }
 
@@ -277,15 +310,14 @@ public class DemuxSocket : SslClient
         Debug.WriteText(up.ToString(), $"SendUpDownstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_up.txt");
         var upbytes = Formatters.FormatUpstream(up.ToByteArray());
         Debug.PWDebug("[SendUpstream] We sent our Upstream!");
-        long sentBytes = Send(upbytes);
-        IsWaitingData = true;
-        if (sentBytes == upbytes.Length)
+        IsUserRequest = true;
+        if (Send(upbytes) == upbytes.Length)
         {
             while (InternalReaded == null)
             {
                 Thread.Sleep(WaitInTimeMS);
             }
-            IsWaitingData = false;
+            IsUserRequest = false;
             var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
             InternalReaded = null;
             if (downstream != null && !CheckTheConnection(downstream))
@@ -295,7 +327,7 @@ public class DemuxSocket : SslClient
                 return downstream;
             }
         }
-        IsWaitingData = false;
+        IsUserRequest = false;
         return null;
     }
 
@@ -306,22 +338,40 @@ public class DemuxSocket : SslClient
     /// <returns></returns>
     public byte[]? SendBytes(byte[] post)
     {
-        long sentBytes = Send(Formatters.FormatUpstream(post));
-        IsWaitingData = true;
-        if (sentBytes == post.Length)
+        IsUserRequest = true;
+        if (Send(Formatters.FormatUpstream(post)) == post.Length)
         {
             while (InternalReaded == null)
             {
                 Thread.Sleep(WaitInTimeMS);
             }
-            IsWaitingData = false;
+            IsUserRequest = false;
             var returner = InternalReaded;
             InternalReaded = null;
             return returner;
         }
-        IsWaitingData = false;
+        IsUserRequest = false;
         return null;
     }
+
+    public byte[]? SendBytes(ReadOnlySpan<byte> bytes)
+    {
+        IsUserRequest = true;
+        if (Send(Formatters.FormatUpstream(bytes)) == bytes.Length)
+        {
+            while (InternalReaded == null)
+            {
+                Thread.Sleep(WaitInTimeMS);
+            }
+            IsUserRequest = false;
+            var returner = InternalReaded;
+            InternalReaded = null;
+            return returner;
+        }
+        IsUserRequest = false;
+        return null;
+    }
+
 
     /// <summary>
     /// Send push to the socket.
@@ -329,37 +379,30 @@ public class DemuxSocket : SslClient
     /// <param name="push">Pushed object</param>
     public void SendPush(Push push)
     {
-        try
-        {
-            Upstream up = new() { Push = push };
-            Send(Formatters.FormatUpstream(up.ToByteArray()));
-            Debug.PWDebug("Write was successful!");
-        }
-        catch (Exception ex)
-        {
-            InternalEx.WriteEx(ex);
-        }
+        Upstream up = new() { Push = push };
+        Send(Formatters.FormatUpstream(up.ToByteArray()));
+        Debug.PWDebug("Write was successful!");
     }
 
     public bool CheckTheConnection(Downstream? downstream)
     {
-        if (downstream?.Push != null)
+        if (downstream == null)
+            return false;
+        if (downstream.Push == null)
+            return false;
+        if (downstream.Push.ConnectionClosed == null)
+            return false;
+        if (downstream.Push.ConnectionClosed.HasConnectionId)
         {
-            if (downstream.Push?.ConnectionClosed != null)
-            {
-                if (downstream.Push.ConnectionClosed.HasConnectionId)
-                {
-                    Console.WriteLine("Connection closed");
-                    TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
-                    return true;
-                }
-                if (downstream.Push.ClientOutdated != null)
-                {
-                    Console.WriteLine("Your Client is Outdated!");
-                    TerminateConnection(0);
-                    return true;
-                }
-            }
+            Console.WriteLine("Connection closed");
+            TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
+            return true;
+        }
+        if (downstream.Push.ClientOutdated != null)
+        {
+            Console.WriteLine("Your Client is Outdated!");
+            TerminateConnection(0);
+            return true;
         }
         return false;
     }
