@@ -6,7 +6,7 @@ public class CustomConnection
 {
     #region Base
     private uint connectionId;
-    private DemuxSocket socket;
+    private readonly DemuxSocket socket;
     public bool IsConnectionClosed = false;
     public string ServiceName = "";
     public uint ReqId { get; set; } = 1;
@@ -76,7 +76,7 @@ public class CustomConnection
         where T : IMessage<T>, new()
     {
         if (IsConnectionClosed)
-            return default(V);
+            return default;
 
         Debug.WriteDebug(post.ToString(), $"DebugConnections/custom_{ServiceName}_req.txt");
         Uplay.Demux.Upstream up = new()
@@ -93,7 +93,7 @@ public class CustomConnection
 
         var down = socket.SendUpstream(up);
         if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
-            return default(V);
+            return default;
 
         var ds = Formatters.FormatData<V>(down.Push.Data.Data.ToByteArray());
 
@@ -102,7 +102,7 @@ public class CustomConnection
             Debug.WriteDebug(ds.ToString(), $"DebugConnections/custom_{ServiceName}_rsp.txt");
             return ds;
         }
-        return default(V);
+        return default;
     }
     #endregion
 }

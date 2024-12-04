@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace UplayKit;
+﻿namespace UplayKit;
 
 internal class InternalEx
 {
@@ -15,15 +13,6 @@ internal class InternalEx
         ToWrite += $"\nSource: {ex.Source}";
         ToWrite += $"\nHResult: {ex.HResult}";
         ToWrite += $"\nHelpLink: {ex.HelpLink}";
-        try
-        {
-            ToWrite += $"\nTargetSite: {JsonConvert.SerializeObject(ex.TargetSite)}";
-            ToWrite += $"\nData: {JsonConvert.SerializeObject(ex.Data)}";
-        }
-        catch
-        {
-            ToWrite += $"\nData: {JsonConvert.SerializeObject(ex.Data)}";
-        }
         File.AppendAllText("UplayKit_Ex.txt", ToWrite);
     }
 }

@@ -1,5 +1,5 @@
 ﻿using Google.Protobuf;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Uplay.Ownership;
 
 namespace UplayKit.Connection;
@@ -8,7 +8,7 @@ public class OwnershipConnection
 {
     #region Base
     private uint connectionId;
-    private DemuxSocket socket;
+    private readonly DemuxSocket socket;
     public bool IsConnectionClosed = false;
     public static readonly string ServiceName = "ownership_service";
     public event EventHandler<Push>? PushEvent;
@@ -151,7 +151,7 @@ public class OwnershipConnection
         {
             if (writeToFile)
             {
-                File.WriteAllText("Ownership.json", JsonConvert.SerializeObject(rsp, Formatting.Indented));
+                File.WriteAllText("Ownership.json", JsonSerializer.Serialize(rsp, new JsonSerializerOptions() { WriteIndented = true }));
                 MemoryStream ms = new();
                 rsp.WriteTo(ms);
                 File.WriteAllBytes("Ownership", ms.ToArray());
@@ -187,7 +187,7 @@ public class OwnershipConnection
         return (string.Empty, ulong.MinValue);
     }
 
-    [Obsolete]
+    [Obsolete("Ubisoft no longer using this")]
     public RegisterTemporaryOwnershipRsp? RegisterTempOwnershipToken(string token)
     {
         Req req = new()

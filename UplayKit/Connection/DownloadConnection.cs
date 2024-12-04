@@ -7,7 +7,7 @@ public class DownloadConnection
 {
     #region Base
     private uint connectionId;
-    private DemuxSocket socket;
+    private readonly DemuxSocket socket;
     public bool IsConnectionClosed = false;
     public bool InitDone = false;   //  These only exist if you need auth or something to can call other things.
     public static readonly string ServiceName = "download_service";
@@ -29,7 +29,7 @@ public class DownloadConnection
     }
     internal void Connect()
     {
-        var openConnectionReq = new Uplay.Demux.Req
+        Uplay.Demux.Req openConnectionReq = new()
         {
             RequestId = socket.RequestId,
             OpenConnectionReq = new()
@@ -75,7 +75,7 @@ public class DownloadConnection
     {
         if (IsConnectionClosed)
             return null;
-        Debug.WriteDebug(req.ToString(), "DebugConnections/download_req.txt");
+        Debug.WriteDebug(req.ToString(), Path.Combine("DebugConnections","download_req.txt"));
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -97,7 +97,7 @@ public class DownloadConnection
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/download_rsp.txt");
+            Debug.WriteDebug(ds.ToString(), Path.Combine("DebugConnections", "download_rsp.txt"));
             return ds.Response;
         }
         return null;
@@ -164,10 +164,10 @@ public class DownloadConnection
     /// <param name="productId">Product Id</param>
     /// <param name="manifestType">manifest,metadata,licenses</param>
     /// <returns>Urls or ""</returns>
-    public string GetUrl(string manifest, uint productId, string manifestType = "manifest")
+    public List<string> GetUrl(string manifest, uint productId, string manifestType = "manifest")
     {
         if (!InitDone)
-            return string.Empty;
+            return new();
 
         Req urlReq = new()
         {
@@ -192,12 +192,12 @@ public class DownloadConnection
         if (urlRsp != null)
         {
             if (UrlRsp.Types.Result.Success == urlRsp.UrlRsp.UrlResponses[0].Result && urlRsp.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
-                return urlRsp.UrlRsp.UrlResponses[0].DownloadUrls[0].Urls[0].ToString();
+                return urlRsp.UrlRsp.UrlResponses[0].DownloadUrls[0].Urls.ToList();
         }
-        return string.Empty;
+        return new();
     }
 
-    public List<string> GetUrlList(uint productId, List<string> ToRelPath)
+    public List<UrlRsp.Types.DownloadUrls> GetUrlList(uint productId, List<string> ToRelPath)
     {
         if (!InitDone)
             return new();
@@ -222,7 +222,7 @@ public class DownloadConnection
         if (downloadUrls != null)
         {
             if (UrlRsp.Types.Result.Success == downloadUrls.UrlRsp.UrlResponses[0].Result && downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
-                return downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.ToList().Select(a => a.Urls[0]).ToList();
+                return downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.ToList();
         }
         return new();
     }

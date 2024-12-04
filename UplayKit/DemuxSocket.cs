@@ -12,10 +12,7 @@ namespace UplayKit;
 #region DemuxEventArgs
 public class DemuxEventArgs : EventArgs
 {
-    public DemuxEventArgs(DataMessage data)
-    {
-        Data = data;
-    }
+    public DemuxEventArgs(DataMessage data) => Data = data;
     public DataMessage Data { get; set; }
 }
 #endregion
@@ -41,15 +38,10 @@ public class DemuxSocket : SslClient
 
     private bool IsUserRequest;
     private ArraySegment<byte> Buffer;
-    private ArraySegment<byte> NonWaitingBuffer;
+    //private ArraySegment<byte> NonWaitingBuffer; // currently unused, soon
     private bool IsWaitingForMore;
+    private bool IsBufferReady;
     private uint WaitingLen;
-
-    // todo remove:
-    byte[]? InternalReaded = null;
-    uint LengthRemaining = 0;
-    bool LengthWaiting;
-    byte[]? ReadedOnRec = null;
     #endregion
     #region Basic
 
@@ -120,9 +112,10 @@ public class DemuxSocket : SslClient
         {
             var length_to_read = Formatters.FormatLength(BitConverter.ToUInt32(buff.Slice(0, 4)));
             Debug.PWDebug($"Should Read Length of {length_to_read}");
-            Buffer = buff.Slice(4, 0);
+            Buffer = buff.Slice(4);
             if (Buffer.Count == length_to_read)
             {
+                IsBufferReady = true;
                 IsWaitingForMore = false;
                 ReceiveAsync();
                 return;
@@ -136,9 +129,8 @@ public class DemuxSocket : SslClient
 
         if (buff.Count == WaitingLen)
         {
-            // Todo make sure this works
-            buff.CopyTo(Buffer);
-            InternalReaded = ReadedOnRec?.Concat(buff).ToArray();
+            Buffer = Buffer.ToArray().Concat(buff).ToArray();
+            IsBufferReady = true;
             IsWaitingForMore = false;
             WaitingLen = 0;
             ReceiveAsync();
@@ -146,35 +138,18 @@ public class DemuxSocket : SslClient
         }
         else
         {
-
-        }
-
-
-        // if length is same as remaining we just return with it
-        if (buff.Count == LengthRemaining)
-        {
-            InternalReaded = ReadedOnRec?.Concat(buff).ToArray();
-            LengthWaiting = false;
-            LengthRemaining = 0;
-            ReceiveAsync();
-            return;
-        }
-        else
-        {
-            // ...
-
-            Debug.WriteDebug($"Remaining Currently: {LengthRemaining}");
-            var remain_buff = buff.Take((int)LengthRemaining).ToArray();
-            ReadedOnRec = ReadedOnRec?.Concat(remain_buff).ToArray();
-            var lasted = buff.Skip((int)LengthRemaining).ToArray();
-            LengthRemaining -= (uint)remain_buff.Length;
-            Debug.WriteDebug($"Remaining to read: {LengthRemaining}");        
+            Debug.WriteDebug($"Waiting Len: {WaitingLen}");
+            var remain_buff = buff.Take((int)WaitingLen).ToArray();
+            Buffer = Buffer.ToArray().Concat(remain_buff).ToArray();
+            var lasted = buff.Skip((int)WaitingLen).ToArray();
+            WaitingLen -= (uint)remain_buff.Length;
+            Debug.WriteDebug($"Waiting to read: {WaitingLen}");
             if (lasted.Length > 0)
             {
                 File.WriteAllBytes($"RemainingBytes_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}", lasted);
                 Debug.WriteDebug("REMAININGBYTES: " + lasted.Length);
             }
-            
+
             ReceiveAsync();
             return;
         }
@@ -258,11 +233,7 @@ public class DemuxSocket : SslClient
             Disconnect();
             return;
         }
-        var CloseMethod = ConnectionObject[connectionID].GetType().GetMethod("Close");
-        if (CloseMethod != null)
-        {
-            CloseMethod.Invoke(ConnectionObject[connectionID], null);
-        }
+        ConnectionObject[connectionID].GetType().GetMethod("Close")?.Invoke(ConnectionObject[connectionID], null);
     }
     #endregion
     #region Ssl Communication with Demux
@@ -282,13 +253,14 @@ public class DemuxSocket : SslClient
         long sentBytes = Send(up);
         if (sentBytes == up.Length)
         {
-            while (InternalReaded == null)
+            while (!IsBufferReady)
             {
                 Thread.Sleep(WaitInTimeMS);
             }
+            IsBufferReady = false;
             IsUserRequest = false;
-            var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
-            InternalReaded = null;
+            var downstream = Formatters.FormatDataNoLength<Downstream>(Buffer);
+            Buffer = ArraySegment<byte>.Empty;
             if (downstream?.Response != null && !CheckTheConnection(downstream))
             {
                 Debug.WriteText(downstream.Response.ToString(), $"SendReqRsp/{req.RequestId}_rsp.txt");
@@ -307,23 +279,24 @@ public class DemuxSocket : SslClient
     /// <exception cref="Exception">If the Response Length from Response is 0</exception>
     public Downstream? SendUpstream(Upstream up)
     {
-        Debug.WriteText(up.ToString(), $"SendUpDownstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_up.txt");
+        Debug.WriteText(up.ToString(), $"SendUpDownstream/{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_up.txt");
         var upbytes = Formatters.FormatUpstream(up.ToByteArray());
         Debug.PWDebug("[SendUpstream] We sent our Upstream!");
         IsUserRequest = true;
         if (Send(upbytes) == upbytes.Length)
         {
-            while (InternalReaded == null)
+            while (!IsBufferReady)
             {
                 Thread.Sleep(WaitInTimeMS);
             }
+            IsBufferReady = false;
             IsUserRequest = false;
-            var downstream = Formatters.FormatDataNoLength<Downstream>(InternalReaded);
-            InternalReaded = null;
+            var downstream = Formatters.FormatDataNoLength<Downstream>(Buffer);
+            Buffer = ArraySegment<byte>.Empty;
             if (downstream != null && !CheckTheConnection(downstream))
             {
                 
-                Debug.WriteText(downstream.ToString(), $"SendUpDownstream/{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}_down.txt");
+                Debug.WriteText(downstream.ToString(), $"SendUpDownstream/{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_down.txt");
                 return downstream;
             }
         }
@@ -341,13 +314,14 @@ public class DemuxSocket : SslClient
         IsUserRequest = true;
         if (Send(Formatters.FormatUpstream(post)) == post.Length)
         {
-            while (InternalReaded == null)
+            while (!IsBufferReady)
             {
                 Thread.Sleep(WaitInTimeMS);
             }
+            IsBufferReady = false;
             IsUserRequest = false;
-            var returner = InternalReaded;
-            InternalReaded = null;
+            var returner = Buffer.ToArray();
+            Buffer = ArraySegment<byte>.Empty;
             return returner;
         }
         IsUserRequest = false;
@@ -359,13 +333,14 @@ public class DemuxSocket : SslClient
         IsUserRequest = true;
         if (Send(Formatters.FormatUpstream(bytes)) == bytes.Length)
         {
-            while (InternalReaded == null)
+            while (!IsBufferReady)
             {
                 Thread.Sleep(WaitInTimeMS);
             }
+            IsBufferReady = false;
             IsUserRequest = false;
-            var returner = InternalReaded;
-            InternalReaded = null;
+            var returner = Buffer.ToArray();
+            Buffer = ArraySegment<byte>.Empty;
             return returner;
         }
         IsUserRequest = false;
