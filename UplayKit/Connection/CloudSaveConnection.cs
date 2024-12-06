@@ -68,8 +68,7 @@ public class CloudSaveConnection
     {
         if (IsConnectionClosed)
             return null;
-
-        Debug.WriteDebug(req.ToString(), "DebugConnections/cloudsave_req.txt");
+        Logs.FileLogger.Verbose("CloudSave Request: {req}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -90,7 +89,7 @@ public class CloudSaveConnection
         var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/cloudsave_rsp.txt");
+            Logs.FileLogger.Verbose("CloudSave Response: {rsp}", ds.ToString());
             return ds.Response;
         }
         return null;

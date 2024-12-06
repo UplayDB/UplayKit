@@ -8,8 +8,8 @@ public class StoreConnection
     #region Base
     private uint connectionId;
     private DemuxSocket socket;
-    public bool isServiceSuccess = false;
-    public bool isConnectionClosed = false;
+    public bool IsServiceSuccess { get; internal set; } = false;
+    public bool IsConnectionClosed { get; internal set; } = false;
     public Storefront storefront = new();
     public static readonly string ServiceName = "store_service";
     public event EventHandler<Push>? PushEvent;
@@ -23,7 +23,7 @@ public class StoreConnection
 
     public void Reconnect()
     {
-        if (isConnectionClosed)
+        if (IsConnectionClosed)
             Connect();
     }
     internal void Connect()
@@ -46,16 +46,16 @@ public class StoreConnection
         }
         else
         {
-            isServiceSuccess = rsp.OpenConnectionRsp.Success;
+            IsServiceSuccess = rsp.OpenConnectionRsp.Success;
             connectionId = rsp.OpenConnectionRsp.ConnectionId;
-            if (isServiceSuccess == true)
+            if (IsServiceSuccess == true)
             {
                 Console.WriteLine("Store Connection successful.");
                 socket.AddToObj(connectionId, this);
                 socket.AddToDict(connectionId, ServiceName);
                 socket.RequestId++;
                 socket.NewMessage += Socket_NewMessage;
-                isConnectionClosed = false;
+                IsConnectionClosed = false;
             }
         }
     }
@@ -67,9 +67,9 @@ public class StoreConnection
             Console.WriteLine($"Connection terminated via Socket {ServiceName}");
         }
         socket.RemoveConnection(connectionId);
-        isServiceSuccess = false;
+        IsServiceSuccess = false;
         connectionId = uint.MaxValue;
-        isConnectionClosed = true;
+        IsConnectionClosed = true;
         socket.NewMessage -= Socket_NewMessage;
     }
     #endregion
@@ -81,7 +81,7 @@ public class StoreConnection
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
             {
-                Debug.WriteDebug(down.Push.ToString(), "store_push.txt");
+                Logs.FileLogger.Verbose("Store Service Push: {push}", down.Push.ToString());
                 PushEvent?.Invoke(this, down.Push);
             }
         }
@@ -89,10 +89,10 @@ public class StoreConnection
 
     public Rsp? SendRequest(Req req)
     {
-        if (isConnectionClosed)
+        if (IsConnectionClosed)
             return null;
 
-        Debug.WriteDebug(req.ToString(), "DebugConnections/store_req.txt");
+        Logs.FileLogger.Verbose("Store Service Request: {req}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -107,14 +107,14 @@ public class StoreConnection
         };
 
         var down = socket.SendUpstream(up);
-        if (isConnectionClosed || down == null || !down.Push.Data.HasData)
+        if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
             return null;
 
         var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/playtime_rsp.txt");
+            Logs.FileLogger.Verbose("Store Service Response: {rsp}", ds.ToString());
             return ds.Response;
         }  
         return null;
@@ -136,13 +136,12 @@ public class StoreConnection
         var initializeRspDownload = SendRequest(initializeReqDownload);
         if (initializeRspDownload != null)
         {
-            isServiceSuccess = initializeRspDownload.InitializeRsp.Success;
-            Console.WriteLine("Store Servive Initialized: " + initializeRspDownload.InitializeRsp.Success);
+            IsServiceSuccess = initializeRspDownload.InitializeRsp.Success;
             storefront = initializeRspDownload.InitializeRsp.Storefront;
         }
         else
         {
-            isServiceSuccess = false;
+            IsServiceSuccess = false;
             storefront = new();
         }
     }
@@ -160,12 +159,12 @@ public class StoreConnection
         var getstorersp = SendRequest(getstorereq);
         if (getstorersp != null)
         {
-            isServiceSuccess = (StoreResult.StoreResponseSuccess == getstorersp.GetStoreRsp.Result);
+            IsServiceSuccess = (StoreResult.StoreResponseSuccess == getstorersp.GetStoreRsp.Result);
             return getstorersp.GetStoreRsp;
         }
         else
         {
-            isServiceSuccess = false;
+            IsServiceSuccess = false;
             return new() { StoreProducts = { }, Result = StoreResult.StoreResponseFailure };
         }
     }
@@ -188,12 +187,12 @@ public class StoreConnection
         var getdatarsp = SendRequest(getdatareq);
         if (getdatarsp != null)
         {
-            isServiceSuccess = (StoreResult.StoreResponseSuccess == getdatarsp.GetDataRsp.Result);
+            IsServiceSuccess = (StoreResult.StoreResponseSuccess == getdatarsp.GetDataRsp.Result);
             return getdatarsp.GetDataRsp;
         }
         else
         {
-            isServiceSuccess = false;
+            IsServiceSuccess = false;
             return new() { Products = { }, Result = StoreResult.StoreResponseFailure };
         }
     }

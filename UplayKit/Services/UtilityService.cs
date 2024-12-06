@@ -35,7 +35,6 @@ public class UtilityService
         var ds = Formatters.FormatDataNoLength<Downstream>(rsp.ServiceRsp.Data.ToByteArray());
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "utility_service.txt");
             return ds.Response;
         }
         return null;
@@ -51,7 +50,6 @@ public class UtilityService
         var rsp = SendRequest(req);
         if (rsp != null)
         {
-            Debug.PrintDebug(rsp);
             return rsp.GeoipRsp;
         }
         else

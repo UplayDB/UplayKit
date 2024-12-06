@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Serilog;
 using Uplay.DownloadService;
 
 namespace UplayKit.Connection;
@@ -75,7 +76,7 @@ public class DownloadConnection
     {
         if (IsConnectionClosed)
             return null;
-        Debug.WriteDebug(req.ToString(), Path.Combine("DebugConnections","download_req.txt"));
+        Logs.FileLogger.Verbose("Download Request: {req}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -97,7 +98,7 @@ public class DownloadConnection
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), Path.Combine("DebugConnections", "download_rsp.txt"));
+            Logs.FileLogger.Verbose("Download Response: {rsp}", ds.ToString());
             return ds.Response;
         }
         return null;

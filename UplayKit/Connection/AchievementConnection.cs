@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Serilog;
 using Uplay.Uplay;
 
 namespace UplayKit.Connection;
@@ -67,7 +68,7 @@ public class AchievementConnection
         if (IsConnectionClosed)
             return null;
 
-        Debug.WriteDebug(req.ToString(), "DebugConnections/ach_req.txt");
+        Logs.FileLogger.Verbose("Achi Request: {req}", req.ToString());
         Uplay.Demux.Upstream up = new()
         {
             Push = new()
@@ -86,10 +87,9 @@ public class AchievementConnection
 
         var ds = Formatters.FormatData<Rsp>(down.Push.Data.Data.ToByteArray());
 
-
         if (ds != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/ach_rsp.txt");
+            Logs.FileLogger.Verbose("Achi Response: {rsp}", ds.ToString());
             return ds;
         }  
         return null;

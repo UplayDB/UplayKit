@@ -79,8 +79,7 @@ public class FriendsConnection
     {
         if (IsConnectionClosed)
             return null;
-
-        Debug.WriteDebug(req.ToString(), "DebugConnections/friends_req.txt");
+        Logs.FileLogger.Verbose("Friends Service Request: {req}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -102,7 +101,7 @@ public class FriendsConnection
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/friends_rsp.txt");
+            Logs.FileLogger.Verbose("Friends Service Response: {rsp}", ds.ToString());
             return ds.Response;
         }
         return null;
@@ -115,7 +114,7 @@ public class FriendsConnection
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
             {
-                Debug.WriteDebug(down.Push.ToString(), "friends_push.txt");
+                Logs.FileLogger.Verbose("Friends Service Push: {push}", down.Push.ToString());
                 PushEvent?.Invoke(this, down.Push);
             }
         }
@@ -141,7 +140,6 @@ public class FriendsConnection
         var rsp = SendRequest(req);
         if (rsp != null)
         {
-            Console.WriteLine("Init rsp: " + rsp.InitializeRsp.Success);
             foreach (var rel in rsp.InitializeRsp.Relationship)
             {
                 if (rel.Blacklisted)
@@ -168,8 +166,9 @@ public class FriendsConnection
         return false;
     }
 
-    public void AcceptAll()
+    public Dictionary<string, bool> AcceptAll()
     {
+        Dictionary<string, bool> accepted = new();
         foreach (var friend in Friends_Received)
         {
             Req req = new()
@@ -184,9 +183,10 @@ public class FriendsConnection
             var rsp = SendRequest(req);
             if (rsp != null)
             {
-                Console.WriteLine(friend.NameOnPlatform + " Is Accepted? " + rsp.AcceptFriendshipRsp.Ok);
+                accepted.Add(friend.NameOnPlatform, rsp.AcceptFriendshipRsp.Ok);
             }
         }
+        return accepted;
     }
 
     public bool SetActivity(Status.Types.ActivityStatus status)

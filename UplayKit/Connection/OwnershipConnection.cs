@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Serilog;
 using System.Text.Json;
 using Uplay.Ownership;
 
@@ -80,7 +81,7 @@ public class OwnershipConnection
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
             {
-                Debug.WriteDebug(down.Push.ToString(), "ownership_push.txt");
+                Logs.FileLogger.Information("Ownership push: {pushMessage}", down.Push.ToString());
                 PushEvent?.Invoke(this, down.Push);
             }
         }
@@ -89,7 +90,7 @@ public class OwnershipConnection
     {
         if (IsConnectionClosed)
             return null;
-        Debug.WriteDebug(req.ToString(), "DebugConnections/ownership_req.txt");
+        Logs.FileLogger.Verbose("Ownership Request: {reqMessage}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -111,7 +112,7 @@ public class OwnershipConnection
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/ownership_rsp.txt");
+            Logs.FileLogger.Verbose("Ownership Response: {rspMessage}", ds.ToString());
             return ds.Response;
         }            
         return null;

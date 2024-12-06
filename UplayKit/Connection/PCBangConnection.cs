@@ -70,8 +70,7 @@ public class PCBangConnection
     {
         if (IsConnectionClosed)
             return null;
-
-        Debug.WriteDebug(req.ToString(), "DebugConnections/pcbang_req.txt");
+        Logs.FileLogger.Verbose("PCBang Service Request: {req}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -93,7 +92,7 @@ public class PCBangConnection
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/pcbang_rsp.txt");
+            Logs.FileLogger.Verbose("PCBang Service Response: {rsp}", ds.ToString());
             return ds.Response;
         }      
         return null;

@@ -36,7 +36,6 @@ public class SteamService
         var ds = Formatters.FormatDataNoLength<Downstream>(rsp.ServiceRsp.Data.ToByteArray());
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "steam_service.txt");
             return ds.Response;
         }
         return null;

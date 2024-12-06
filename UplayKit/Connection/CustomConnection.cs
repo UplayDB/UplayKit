@@ -78,7 +78,7 @@ public class CustomConnection
         if (IsConnectionClosed)
             return default;
 
-        Debug.WriteDebug(post.ToString(), $"DebugConnections/custom_{ServiceName}_req.txt");
+        Logs.FileLogger.Verbose("Custom Service Post: {post}", post.ToString());
         Uplay.Demux.Upstream up = new()
         {
             Push = new()
@@ -99,7 +99,7 @@ public class CustomConnection
 
         if (ds != null)
         {
-            Debug.WriteDebug(ds.ToString(), $"DebugConnections/custom_{ServiceName}_rsp.txt");
+            Logs.FileLogger.Verbose("Custom Service Response: {Response}", ds.ToString());
             return ds;
         }
         return default;

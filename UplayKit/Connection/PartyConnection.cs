@@ -75,7 +75,7 @@ public class PartyConnection
         if (IsConnectionClosed)
             return null;
 
-        Debug.WriteDebug(req.ToString(), "DebugConnections/party_req.txt");
+        Logs.FileLogger.Verbose("Party Service Request: {req}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -98,7 +98,7 @@ public class PartyConnection
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/party_rsp.txt");
+            Logs.FileLogger.Verbose("Pary Service Response: {rsp}", ds.ToString());
             return ds.Response;
         }  
         return null;
@@ -110,7 +110,7 @@ public class PartyConnection
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
             {
-                Debug.WriteDebug(down.Push.ToString(), "party_push.txt");
+                Logs.FileLogger.Verbose("Party Service Push: {rsp}", down.Push.ToString());
                 PushEvent?.Invoke(this, down.Push);
             }
         }

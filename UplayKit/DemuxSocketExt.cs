@@ -9,9 +9,6 @@ public static class DemuxSocketExt
         Push keepalive = new()
         {
             KeepAlive = new()
-            {
-
-            }
         };
 
         socket.SendPush(keepalive);

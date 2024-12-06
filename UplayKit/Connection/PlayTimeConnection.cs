@@ -73,7 +73,7 @@ public class PlayTimeConnection
         if (isConnectionClosed)
             return null;
 
-        Debug.WriteDebug(req.ToString(), "DebugConnections/playtime_req.txt");
+        Logs.FileLogger.Verbose("Playtime Service Request: {req}", req.ToString());
         Upstream post = new() { Request = req };
         Uplay.Demux.Upstream up = new()
         {
@@ -95,7 +95,7 @@ public class PlayTimeConnection
 
         if (ds != null || ds?.Response != null)
         {
-            Debug.WriteDebug(ds.ToString(), "DebugConnections/playtime_rsp.txt");
+            Logs.FileLogger.Verbose("Playtime Service Response: {rsp}", ds.ToString());
             return ds.Response;
         }             
         return null;
