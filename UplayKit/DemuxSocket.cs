@@ -11,10 +11,9 @@ using System.Buffers;
 namespace UplayKit;
 
 #region DemuxEventArgs
-public class DemuxEventArgs : EventArgs
+public class DemuxEventArgs(DataMessage data) : EventArgs
 {
-    public DemuxEventArgs(DataMessage data) => Data = data;
-    public DataMessage Data { get; set; }
+    public DataMessage Data { get; set; } = data;
 }
 #endregion
 public class DemuxSocket : SslClient
@@ -25,17 +24,17 @@ public class DemuxSocket : SslClient
     public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
     public static int ConnectionPort { get; internal set; } = 443;
     public int WaitInTimeMS = 10;
-    public uint ClientVersion { get; internal set; } = 11194;
+    public const uint ClientVersion = 11646;
     public bool TestConfig { get; set; } = false;
     public uint TerminateConnectionId { get; internal set; } = 0;
     /// <summary>
     /// Connection Dictionary for the Service Names.
     /// </summary>
-    public Dictionary<uint, string> ConnectionDict = new();
+    public Dictionary<uint, string> ConnectionDict = [];
     /// <summary>
     /// Connection Dictionary for the whole Connection (this)
     /// </summary>
-    public Dictionary<uint, object> ConnectionObject = new();
+    public Dictionary<uint, object> ConnectionObject = [];
 
     private bool IsUserRequest;
     private ArraySegment<byte> Buffer;
@@ -43,7 +42,7 @@ public class DemuxSocket : SslClient
     private bool IsWaitingForMore;
     private bool IsBufferReady;
     private uint WaitingLen;
-    private object Locker = new object();
+    private readonly object Locker = new();
     #endregion
     #region Basic
 
@@ -96,14 +95,14 @@ public class DemuxSocket : SslClient
                 NonUserRequest(Formatters.FormatData<Downstream>(buff));
 
                 Logs.FileLogger.Verbose("Remaining buffer count: " + buff.Count);
-                File.WriteAllBytes("Error_Remaining_Buff", buff.ToArray());
+                File.WriteAllBytes("Error_Remaining_Buff", [.. buff]);
                 File.WriteAllBytes("Error_Remaining_Bytes", buffer);
             }
             else
             {
                 Logs.FileLogger.Verbose($"Unknown byte! {buff[0]}");
                 //Debug.PWDebug($"Unknown byte! {_InternalReaded[0]}   ", "ERROR");
-                File.WriteAllBytes("Error_Received_Buff", buff.ToArray());
+                File.WriteAllBytes("Error_Received_Buff", [.. buff]);
                 File.WriteAllBytes("Error_Received_Bytes", buffer);
             }
         }

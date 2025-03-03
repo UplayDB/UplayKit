@@ -6,12 +6,12 @@ public class CustomService
 {
     #region Base
     public string Service;
-    private DemuxSocket socket;
+    private readonly DemuxSocket socket;
     public CustomService(string service, DemuxSocket demuxSocket)
     {
         Service = service;
         socket = demuxSocket;
-        Console.WriteLine("CustomService is Ready");
+        Console.WriteLine($"{Service} is Ready");
     }
     #endregion
     #region Request        

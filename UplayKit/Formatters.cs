@@ -11,7 +11,8 @@ public static class Formatters
         int index = 0;
         for (; size > 1024; index++)
             size /= 1024;
-        return size.ToString($"0.000 {new[] { "B", "KB", "MB", "GB", "TB" }[index]}");
+        string[] strings = ["B", "KB", "MB", "GB", "TB"];
+        return size.ToString($"0.000 {strings[index]}");
     }
 
     public static byte[] FormatUpstream(this ReadOnlySpan<byte> rawMessage)
@@ -35,7 +36,7 @@ public static class Formatters
 
     public static char FormatSliceHashChar(this string sliceId)
     {
-        char[] base32 = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v' };
+        char[] base32 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v'];
         byte reversedValue = byte.Parse($"{sliceId[1]}{sliceId[0]}", System.Globalization.NumberStyles.HexNumber);
         int offset = (int)Math.Floor((decimal)reversedValue / 16);
         int halfOffset = reversedValue % 2 == 0 ? 0 : 16;

@@ -1,82 +1,24 @@
-﻿using Google.Protobuf;
-using Uplay.Store;
+﻿using Uplay.Store;
 
 namespace UplayKit.Connection;
 
-public class StoreConnection
+public class StoreConnection(DemuxSocket demuxSocket) : CustomConnection("store_service", demuxSocket)
 {
     #region Base
-    private uint connectionId;
-    private DemuxSocket socket;
-    public bool IsServiceSuccess { get; internal set; } = false;
-    public bool IsConnectionClosed { get; internal set; } = false;
     public Storefront storefront = new();
-    public static readonly string ServiceName = "store_service";
     public event EventHandler<Push>? PushEvent;
-    private uint ReqId { get; set; } = 1;
-    public StoreConnection(DemuxSocket demuxSocket)
+    public override void OnConnected()
     {
-        socket = demuxSocket;
-
-        Connect();
+        socket.NewMessage += Socket_NewMessage;
     }
 
-    public void Reconnect()
+    public override void OnDisconnected()
     {
-        if (IsConnectionClosed)
-            Connect();
-    }
-    internal void Connect()
-    {
-
-        var openConnectionReq = new Uplay.Demux.Req
-        {
-            RequestId = socket.RequestId,
-            OpenConnectionReq = new()
-            {
-                ServiceName = ServiceName
-            }
-        };
-        var rsp = socket.SendReq(openConnectionReq);
-        storefront = new();
-        if (rsp == null)
-        {
-            Console.WriteLine("Store Connection cancelled.");
-            Close();
-        }
-        else
-        {
-            IsServiceSuccess = rsp.OpenConnectionRsp.Success;
-            connectionId = rsp.OpenConnectionRsp.ConnectionId;
-            if (IsServiceSuccess == true)
-            {
-                Console.WriteLine("Store Connection successful.");
-                socket.AddToObj(connectionId, this);
-                socket.AddToDict(connectionId, ServiceName);
-                socket.RequestId++;
-                socket.NewMessage += Socket_NewMessage;
-                IsConnectionClosed = false;
-            }
-        }
-    }
-
-    public void Close()
-    {
-        if (socket.TerminateConnectionId == connectionId)
-        {
-            Console.WriteLine($"Connection terminated via Socket {ServiceName}");
-        }
-        socket.RemoveConnection(connectionId);
-        IsServiceSuccess = false;
-        connectionId = uint.MaxValue;
-        IsConnectionClosed = true;
         socket.NewMessage -= Socket_NewMessage;
     }
-    #endregion
-    #region Request/Message
     private void Socket_NewMessage(object? sender, DemuxEventArgs e)
     {
-        if (e.Data.ConnectionId == connectionId)
+        if (e.Data.ConnectionId == ConnectionId)
         {
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
@@ -86,44 +28,11 @@ public class StoreConnection
             }
         }
     }
-
-    public Rsp? SendRequest(Req req)
-    {
-        if (IsConnectionClosed)
-            return null;
-
-        Logs.FileLogger.Verbose("Store Service Request: {req}", req.ToString());
-        Upstream post = new() { Request = req };
-        Uplay.Demux.Upstream up = new()
-        {
-            Push = new()
-            {
-                Data = new()
-                {
-                    ConnectionId = connectionId,
-                    Data = ByteString.CopyFrom(Formatters.FormatUpstream(post.ToByteArray()))
-                }
-            }
-        };
-
-        var down = socket.SendUpstream(up);
-        if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
-            return null;
-
-        var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-
-        if (ds != null || ds?.Response != null)
-        {
-            Logs.FileLogger.Verbose("Store Service Response: {rsp}", ds.ToString());
-            return ds.Response;
-        }  
-        return null;
-    }
     #endregion
     #region Functions
-    public void Init()
+    public bool Init()
     {
-        Req initializeReqDownload = new()
+        Req req = new()
         {
             InitializeReq = new()
             {
@@ -133,22 +42,19 @@ public class StoreConnection
             RequestId = ReqId
         };
         ReqId++;
-        var initializeRspDownload = SendRequest(initializeReqDownload);
-        if (initializeRspDownload != null)
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
         {
-            IsServiceSuccess = initializeRspDownload.InitializeRsp.Success;
-            storefront = initializeRspDownload.InitializeRsp.Storefront;
-        }
-        else
-        {
-            IsServiceSuccess = false;
             storefront = new();
+            return false;
         }
+        storefront = rsp.Response.InitializeRsp.Storefront;
+        return rsp.Response.InitializeRsp.Success;
     }
 
-    public GetStoreRsp GetStore()
+    public GetStoreRsp? GetStore()
     {
-        Req getstorereq = new()
+        Req req = new()
         {
             RequestId = ReqId,
             GetStoreReq = new()
@@ -156,22 +62,15 @@ public class StoreConnection
             }
         };
         ReqId++;
-        var getstorersp = SendRequest(getstorereq);
-        if (getstorersp != null)
-        {
-            IsServiceSuccess = (StoreResult.StoreResponseSuccess == getstorersp.GetStoreRsp.Result);
-            return getstorersp.GetStoreRsp;
-        }
-        else
-        {
-            IsServiceSuccess = false;
-            return new() { StoreProducts = { }, Result = StoreResult.StoreResponseFailure };
-        }
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.GetStoreRsp;
     }
 
-    public GetDataRsp GetData(StoreType storeType, List<uint> prodIds)
+    public GetDataRsp? GetData(StoreType storeType, List<uint> prodIds)
     {
-        Req getdatareq = new()
+        Req req = new()
         {
             RequestId = ReqId,
             GetDataReq = new()
@@ -184,17 +83,10 @@ public class StoreConnection
             }
         };
         ReqId++;
-        var getdatarsp = SendRequest(getdatareq);
-        if (getdatarsp != null)
-        {
-            IsServiceSuccess = (StoreResult.StoreResponseSuccess == getdatarsp.GetDataRsp.Result);
-            return getdatarsp.GetDataRsp;
-        }
-        else
-        {
-            IsServiceSuccess = false;
-            return new() { Products = { }, Result = StoreResult.StoreResponseFailure };
-        }
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.GetDataRsp;
     }
     #endregion
 }

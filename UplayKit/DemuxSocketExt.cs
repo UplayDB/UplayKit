@@ -32,11 +32,9 @@ public static class DemuxSocketExt
             RequestId = socket.RequestId
         };
         var patchrsp = socket.SendReq(patchreq);
-        if (patchrsp != null)
-        {
-            return (socket.ClientVersion == patchrsp.GetPatchInfoRsp.LatestVersion);
-        }
-        return false;
+        if (patchrsp == null)
+            return false;
+        return DemuxSocket.ClientVersion == patchrsp.GetPatchInfoRsp.LatestVersion;
     }
 
     public static GetPatchInfoRsp? GetPatch(this DemuxSocket socket, string trackId = "DEFAULT", uint trackType = 0)
@@ -53,11 +51,9 @@ public static class DemuxSocketExt
             RequestId = socket.RequestId
         };
         var patchrsp = socket.SendReq(patchreq);
-        if (patchrsp != null)
-        {
-            return patchrsp.GetPatchInfoRsp;
-        }
-        return null;
+        if (patchrsp == null)
+            return null;
+        return patchrsp.GetPatchInfoRsp;
     }
 
     /// <summary>
@@ -69,7 +65,7 @@ public static class DemuxSocketExt
         {
             ClientVersion = new()
             {
-                Version = socket.ClientVersion
+                Version = DemuxSocket.ClientVersion
             }
         };
 
@@ -91,7 +87,7 @@ public static class DemuxSocketExt
             AuthenticateReq = new()
             {
                 ClientId = "uplay_pc",
-                SendKeepAlive = false,
+                SendKeepAlive = KeepAlive,
                 Token = new()
                 {
                     UbiTicket = token
@@ -100,9 +96,7 @@ public static class DemuxSocketExt
         };
         var authRsp = socket.SendReq(authReq);
         if (authRsp == null)
-        {
             return false;
-        }
         return authRsp.AuthenticateRsp.Success;
     }
 }

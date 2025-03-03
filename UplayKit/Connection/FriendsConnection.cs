@@ -1,115 +1,28 @@
-﻿using Google.Protobuf;
-using Uplay.Friends;
+﻿using Uplay.Friends;
 
 namespace UplayKit.Connection;
 
-public class FriendsConnection
+public class FriendsConnection(DemuxSocket demuxSocket) : CustomConnection("friends_service", demuxSocket)
 {
     #region Base
-    public uint connectionId;
-    public DemuxSocket socket;
-    public bool IsConnectionClosed = false;
-    public List<Friend> Friends;
-    public List<Friend> Friends_Send;
-    public List<Friend> Friends_Received;
-    public static readonly string ServiceName = "friends_service";
+    public List<Friend> Friends = [];
+    public List<Friend> Friends_Send = [];
+    public List<Friend> Friends_Received = [];
     public event EventHandler<Push>? PushEvent;
-    private uint ReqId { get; set; } = 1;
-    public FriendsConnection(DemuxSocket demuxSocket)
+
+    public override void OnConnected()
     {
-        socket = demuxSocket;
-        Friends = new();
-        Friends_Send = new();
-        Friends_Received = new();
-        Connect();
+        socket.NewMessage += Socket_NewMessage;
     }
 
-    public void Reconnect()
+    public override void OnDisconnected()
     {
-        if (IsConnectionClosed)
-            Connect();
-    }
-    internal void Connect()
-    {
-        Friends = new();
-        Friends_Send = new();
-        Friends_Received = new();
-        var openConnectionReq = new Uplay.Demux.Req
-        {
-            OpenConnectionReq = new()
-            {
-                ServiceName = ServiceName
-            },
-            RequestId = socket.RequestId,
-        };
-        socket.RequestId++;
-        var rsp = socket.SendReq(openConnectionReq);
-        if (rsp == null)
-        {
-            Console.WriteLine("Friends Connection cancelled.");
-            Close();
-        }
-        else
-        {
-            connectionId = rsp.OpenConnectionRsp.ConnectionId;
-            if (rsp.OpenConnectionRsp.Success)
-            {
-                Console.WriteLine("Friends Connection successful");
-                socket.AddToObj(connectionId, this);
-                socket.AddToDict(connectionId, ServiceName);
-                socket.NewMessage += Socket_NewMessage;
-                IsConnectionClosed = false;
-            }
-        }
-    }
-    public void Close()
-    {
-        if (socket.TerminateConnectionId == connectionId)
-        {
-            Console.WriteLine($"Connection terminated via Socket {ServiceName}");
-        }
-        socket.RemoveConnection(connectionId);
-        connectionId = uint.MaxValue;
-        IsConnectionClosed = true;
         socket.NewMessage -= Socket_NewMessage;
-    }
-    #endregion
-    #region Request/Message
-    public Rsp? SendRequest(Req req)
-    {
-        if (IsConnectionClosed)
-            return null;
-        Logs.FileLogger.Verbose("Friends Service Request: {req}", req.ToString());
-        Upstream post = new() { Request = req };
-        Uplay.Demux.Upstream up = new()
-        {
-            Push = new()
-            {
-                Data = new()
-                {
-                    ConnectionId = connectionId,
-                    Data = ByteString.CopyFrom(Formatters.FormatUpstream(post.ToByteArray()))
-                }
-            }
-        };
-
-        var down = socket.SendUpstream(up);
-        if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
-            return null;
-
-        var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-
-        if (ds != null || ds?.Response != null)
-        {
-            Logs.FileLogger.Verbose("Friends Service Response: {rsp}", ds.ToString());
-            return ds.Response;
-        }
-        return null;
     }
 
     private void Socket_NewMessage(object? sender, DemuxEventArgs e)
     {
-        if (e.Data.ConnectionId == connectionId)
+        if (e.Data.ConnectionId == ConnectionId)
         {
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
@@ -137,38 +50,36 @@ public class FriendsConnection
             }
         };
         ReqId++;
-        var rsp = SendRequest(req);
-        if (rsp != null)
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return false;
+        foreach (var rel in rsp.Response.InitializeRsp.Relationship)
         {
-            foreach (var rel in rsp.InitializeRsp.Relationship)
-            {
-                if (rel.Blacklisted)
-                    continue;
+            if (rel.Blacklisted)
+                continue;
 
-                switch (rel.Relation)
-                {
-                    case Relationship.Types.Relation.Friends:
-                        Friends.Add(rel.Friend);
-                        break;
-                    case Relationship.Types.Relation.PendingReceivedInvite:
-                        Friends_Received.Add(rel.Friend);
-                        break;
-                    case Relationship.Types.Relation.PendingSentInvite:
-                        Friends_Send.Add(rel.Friend);
-                        break;
-                    case Relationship.Types.Relation.NoRelationship:
-                    default:
-                        break;
-                }
+            switch (rel.Relation)
+            {
+                case Relationship.Types.Relation.Friends:
+                    Friends.Add(rel.Friend);
+                    break;
+                case Relationship.Types.Relation.PendingReceivedInvite:
+                    Friends_Received.Add(rel.Friend);
+                    break;
+                case Relationship.Types.Relation.PendingSentInvite:
+                    Friends_Send.Add(rel.Friend);
+                    break;
+                case Relationship.Types.Relation.NoRelationship:
+                default:
+                    break;
             }
-            return rsp.InitializeRsp.Success;
         }
-        return false;
+        return rsp.Response.InitializeRsp.Success;
     }
 
     public Dictionary<string, bool> AcceptAll()
     {
-        Dictionary<string, bool> accepted = new();
+        Dictionary<string, bool> accepted = [];
         foreach (var friend in Friends_Received)
         {
             Req req = new()
@@ -180,10 +91,10 @@ public class FriendsConnection
                 }
             };
             ReqId++;
-            var rsp = SendRequest(req);
-            if (rsp != null)
+            var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+            if (rsp != null && rsp.Response != null)
             {
-                accepted.Add(friend.NameOnPlatform, rsp.AcceptFriendshipRsp.Ok);
+                accepted.Add(friend.NameOnPlatform, rsp.Response.AcceptFriendshipRsp.Ok);
             }
         }
         return accepted;
@@ -200,12 +111,10 @@ public class FriendsConnection
             }
         };
         ReqId++;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-        {
-            return rsp.SetActivityStatusRsp.Success;
-        }
-        return false;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return false;
+        return rsp.Response.SetActivityStatusRsp.Success;
     }
 
     public bool SetGame(uint productId, string productname)
@@ -223,12 +132,10 @@ public class FriendsConnection
             }
         };
         ReqId++;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-        {
-            return rsp.SetGameRsp.Success;
-        }
-        return false;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return false;
+        return rsp.Response.SetGameRsp.Success;
     }
     public bool SetEmptyGame()
     {
@@ -240,12 +147,10 @@ public class FriendsConnection
             }
         };
         ReqId++;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-        {
-            return rsp.SetGameRsp.Success;
-        }
-        return false;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return false;
+        return rsp.Response.SetGameRsp.Success;
     }
     public bool SetRichPresence(uint productId, string key, string val)
     {
@@ -270,13 +175,10 @@ public class FriendsConnection
             }
         };
         ReqId++;
-
-        var rsp = SendRequest(req);
-        if (rsp != null)
-        {
-            return rsp.SetRichPresenceRsp.Success;
-        }
-        return false;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return false;
+        return rsp.Response.SetRichPresenceRsp.Success;
     }
     #endregion
 }

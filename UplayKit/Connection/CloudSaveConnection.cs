@@ -3,98 +3,8 @@ using Uplay.CloudsaveService;
 
 namespace UplayKit.Connection;
 
-public class CloudSaveConnection
+public class CloudSaveConnection(DemuxSocket demuxSocket) : CustomConnection("cloudsave_service", demuxSocket)
 {
-    #region Base
-    public uint connectionId;
-    public DemuxSocket socket;
-    public bool IsConnectionClosed = false;
-    public static readonly string ServiceName = "cloudsave_service";
-    private uint ReqId { get; set; } = 1;
-    public CloudSaveConnection(DemuxSocket demuxSocket)
-    {
-        socket = demuxSocket;
-        Connect();
-    }
-
-    public void Reconnect()
-    {
-        if (IsConnectionClosed)
-            Connect();
-    }
-    internal void Connect()
-    {
-        var openConnectionReq = new Uplay.Demux.Req
-        {
-            OpenConnectionReq = new()
-            {
-                ServiceName = ServiceName
-            },
-            RequestId = socket.RequestId
-        };
-        socket.RequestId++;
-        var rsp = socket.SendReq(openConnectionReq);
-        if (rsp == null)
-        {
-            Console.WriteLine("CloudSave Connection cancelled.");
-            Close();
-        }
-        else
-        {
-            connectionId = rsp.OpenConnectionRsp.ConnectionId;
-            if (rsp.OpenConnectionRsp.Success)
-            {
-                Console.WriteLine("CloudSave Connection successful");
-                socket.AddToObj(connectionId, this);
-                socket.AddToDict(connectionId, ServiceName);
-                IsConnectionClosed = false;
-            }
-        }
-    }
-
-    public void Close()
-    {
-        if (socket.TerminateConnectionId == connectionId)
-        {
-            Console.WriteLine($"Connection terminated via Socket {ServiceName}");
-        }
-        socket.RemoveConnection(connectionId);
-        connectionId = uint.MaxValue;
-        IsConnectionClosed = true;
-    }
-    #endregion
-    #region Request
-    public Rsp? SendRequest(Req req)
-    {
-        if (IsConnectionClosed)
-            return null;
-        Logs.FileLogger.Verbose("CloudSave Request: {req}", req.ToString());
-        Upstream post = new() { Request = req };
-        Uplay.Demux.Upstream up = new()
-        {
-            Push = new()
-            {
-                Data = new()
-                {
-                    ConnectionId = connectionId,
-                    Data = ByteString.CopyFrom(Formatters.FormatUpstream(post.ToByteArray()))
-                }
-            }
-        };
-
-        var down = socket.SendUpstream(up);
-        if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
-            return null;
-
-        var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-        if (ds != null || ds?.Response != null)
-        {
-            Logs.FileLogger.Verbose("CloudSave Response: {rsp}", ds.ToString());
-            return ds.Response;
-        }
-        return null;
-    }
-    #endregion
     #region Functions
     public CloudsaveRsp List(uint uplayid, string Username, string ownershipToken)
     {
@@ -109,15 +19,10 @@ public class CloudSaveConnection
                 ListItems = new()
             }
         };
-        var userinforsp = SendRequest(getuserinfo);
-        if (userinforsp != null)
-        {
-            return userinforsp.CloudsaveRsp;
-        }
-        else
-        {
+        var userinforsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = getuserinfo });
+        if (userinforsp == null)
             return new() { Status = CloudsaveRsp.Types.Status.InternalError };
-        }
+        return userinforsp.Response.CloudsaveRsp;
     }
 
     public CloudsaveRsp GetItem(uint uplayid, string Username, string ownershipToken, uint ItemId)
@@ -136,15 +41,10 @@ public class CloudSaveConnection
                 }
             }
         };
-        var userinforsp = SendRequest(getuserinfo);
-        if (userinforsp != null)
-        {
-            return userinforsp.CloudsaveRsp;
-        }
-        else
-        {
+        var userinforsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = getuserinfo });
+        if (userinforsp == null)
             return new() { Status = CloudsaveRsp.Types.Status.InternalError };
-        }
+        return userinforsp.Response.CloudsaveRsp;
     }
 
     public CloudsaveUrlRsp Send(uint uplayid, string ownershipToken, string ItemName, string md5B64, uint lenght)
@@ -169,15 +69,10 @@ public class CloudSaveConnection
                 Items = { item }
             }
         };
-        var userinforsp = SendRequest(getuserinfo);
-        if (userinforsp != null)
-        {
-            return userinforsp.CloudsaveUrlRsp;
-        }
-        else
-        {
+        var userinforsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = getuserinfo });
+        if (userinforsp == null)
             return new() { Status = CloudsaveUrlRsp.Types.Status.InternalError };
-        }
+        return userinforsp.Response.CloudsaveUrlRsp;
     }
 
     public CloudsaveUrlRsp Get(uint uplayid, string ownershipToken, string ItemName)
@@ -197,15 +92,10 @@ public class CloudSaveConnection
                 Items = { item }
             }
         };
-        var userinforsp = SendRequest(getuserinfo);
-        if (userinforsp != null)
-        {
-            return userinforsp.CloudsaveUrlRsp;
-        }
-        else
-        {
+        var userinforsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = getuserinfo });
+        if (userinforsp == null)
             return new() { Status = CloudsaveUrlRsp.Types.Status.InternalError };
-        }
+        return userinforsp.Response.CloudsaveUrlRsp;
     }
 
     public CloudsaveRspV2 GetV2(uint uplayid, string ownershipToken, string ItemName, uint ItemId)
@@ -229,16 +119,11 @@ public class CloudSaveConnection
                     }
                 },
             }
-        };
-        var userinforsp = SendRequest(getuserinfo);
-        if (userinforsp != null)
-        {
-            return userinforsp.CloudsaveRspV2;
-        }
-        else
-        {
+        }; 
+        var userinforsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = getuserinfo });
+        if (userinforsp == null)
             return new() { Status = CloudsaveRspV2.Types.Status.InternalError };
-        }
+        return userinforsp.Response.CloudsaveRspV2;
     }
     #endregion
 }

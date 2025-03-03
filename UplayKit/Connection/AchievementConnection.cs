@@ -1,100 +1,9 @@
-﻿using Google.Protobuf;
-using Serilog;
-using Uplay.Uplay;
+﻿using Uplay.Uplay;
 
 namespace UplayKit.Connection;
 
-public class AchievementConnection
+public class AchievementConnection(DemuxSocket demuxSocket) : CustomConnection("ach_frontend", demuxSocket)
 {
-    #region Base
-    private uint connectionId;
-    private DemuxSocket socket;
-    public bool IsConnectionClosed = false;
-    public static readonly string ServiceName = "ach_frontend";
-    private uint ReqId { get; set; } = 1;
-    public AchievementConnection(DemuxSocket demuxSocket)
-    {
-        socket = demuxSocket;
-        Connect();
-    }
-    public void Reconnect()
-    {
-        if (IsConnectionClosed)
-            Connect();
-    }
-    internal void Connect()
-    {
-        var openConnectionReq = new Uplay.Demux.Req
-        {
-            RequestId = socket.RequestId,
-            OpenConnectionReq = new()
-            {
-                ServiceName = ServiceName
-            }
-        };
-        socket.RequestId++;
-        var rsp = socket.SendReq(openConnectionReq);
-        if (rsp == null)
-        {
-            Console.WriteLine("Achievement Connection cancelled.");
-            Close();
-        }
-        else
-        {
-            connectionId = rsp.OpenConnectionRsp.ConnectionId;
-            if (rsp.OpenConnectionRsp.Success)
-            {
-                Console.WriteLine("Achievement Connection successful.");
-                socket.AddToObj(connectionId, this);
-                socket.AddToDict(connectionId, ServiceName);
-                IsConnectionClosed = false;
-            }
-        }
-    }
-    public void Close()
-    {
-        if (socket.TerminateConnectionId == connectionId)
-        {
-            Console.WriteLine($"Connection terminated via Socket {ServiceName}");
-        }
-        socket.RemoveConnection(connectionId);
-        connectionId = uint.MaxValue;
-        IsConnectionClosed = true;
-    }
-    #endregion
-    #region Request
-    public Rsp? SendRequest(Req req)
-    {
-        if (IsConnectionClosed)
-            return null;
-
-        Logs.FileLogger.Verbose("Achi Request: {req}", req.ToString());
-        Uplay.Demux.Upstream up = new()
-        {
-            Push = new()
-            {
-                Data = new()
-                {
-                    ConnectionId = connectionId,
-                    Data = ByteString.CopyFrom(Formatters.FormatUpstream(req.ToByteArray()))
-                }
-            }
-        };
-
-        var down = socket.SendUpstream(up);
-        if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
-            return null;
-
-        var ds = Formatters.FormatData<Rsp>(down.Push.Data.Data.ToByteArray());
-
-        if (ds != null)
-        {
-            Logs.FileLogger.Verbose("Achi Response: {rsp}", ds.ToString());
-            return ds;
-        }  
-        return null;
-    }
-    #endregion
     #region Functions
     public bool Auth(string token)
     {
@@ -107,10 +16,10 @@ public class AchievementConnection
             }
         };
         ReqId++;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.AuthenticateRsp.Success;
-        return false;
+        var rsp = SendPostRequest<Req, Rsp>(req);
+        if (rsp == null)
+            return false;
+        return rsp.AuthenticateRsp.Success;
     }
 
     public List<ProductAchievements> GetAchievements(string userId, string ProductId, string PlatformId)
@@ -129,10 +38,10 @@ public class AchievementConnection
             }
         };
         ReqId++;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.ReadAchievementsRsp.AchievementBlob.ProductAchievements.ToList();
-        return new();
+        var rsp = SendPostRequest<Req, Rsp>(req);
+        if (rsp == null)
+            return [];
+        return [.. rsp.ReadAchievementsRsp.AchievementBlob.ProductAchievements];
     }
 
     public bool WriteAchievement(List<ProductAchievements> productAchievements)
@@ -149,7 +58,7 @@ public class AchievementConnection
             }
         };
         ReqId++;
-        var rsp = SendRequest(req);
+        var rsp = SendPostRequest<Req, Rsp>(req);
         return rsp != null;
     }
     #endregion

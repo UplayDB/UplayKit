@@ -5,9 +5,9 @@ namespace UplayKit.Connection;
 public class CustomConnection
 {
     #region Base
-    private uint connectionId;
-    private readonly DemuxSocket socket;
-    public bool IsConnectionClosed = false;
+    public uint ConnectionId { get; protected set; }
+    public readonly DemuxSocket socket;
+    public bool IsConnectionClosed { get; protected set; } = false;
     public string ServiceName = "";
     public uint ReqId { get; set; } = 1;
     public CustomConnection(string serviceName, DemuxSocket demuxSocket)
@@ -28,7 +28,7 @@ public class CustomConnection
 
     internal void Connect()
     {
-        var openConnectionReq = new Uplay.Demux.Req
+        Uplay.Demux.Req openConnectionReq = new()
         {
             RequestId = socket.RequestId,
             OpenConnectionReq = new()
@@ -40,18 +40,19 @@ public class CustomConnection
         var rsp = socket.SendReq(openConnectionReq);
         if (rsp == null)
         {
-            Console.WriteLine("Custom Connection cancelled.");
+            Console.WriteLine("ServiceName Connection cancelled.");
             Close();
         }
         else
         {
-            connectionId = rsp.OpenConnectionRsp.ConnectionId;
+            ConnectionId = rsp.OpenConnectionRsp.ConnectionId;
             if (rsp.OpenConnectionRsp.Success)
             {
-                Console.WriteLine("Custom Connection successful.");
-                socket.AddToObj(connectionId, this);
-                socket.AddToDict(connectionId, ServiceName);
+                Console.WriteLine("ServiceName Connection successful.");
+                socket.AddToObj(ConnectionId, this);
+                socket.AddToDict(ConnectionId, ServiceName);
                 IsConnectionClosed = false;
+                OnConnected();
             }
         }
     }
@@ -61,13 +62,24 @@ public class CustomConnection
     /// </summary>
     public void Close()
     {
-        if (socket.TerminateConnectionId == connectionId)
+        if (socket.TerminateConnectionId == ConnectionId)
         {
             Console.WriteLine($"Connection terminated via Socket {ServiceName}");
         }
-        socket.RemoveConnection(connectionId);
-        connectionId = uint.MaxValue;
+        socket.RemoveConnection(ConnectionId);
+        ConnectionId = uint.MaxValue;
         IsConnectionClosed = true;
+        OnDisconnected();
+    }
+    #endregion
+    #region Virtuals
+    public virtual void OnConnected()
+    {
+
+    }
+    public virtual void OnDisconnected()
+    {
+
     }
     #endregion
     #region Request
@@ -78,14 +90,14 @@ public class CustomConnection
         if (IsConnectionClosed)
             return default;
 
-        Logs.FileLogger.Verbose("Custom Service Post: {post}", post.ToString());
+        Logs.FileLogger.Verbose("{ServiceName} Post: {post}", ServiceName, post.ToString());
         Uplay.Demux.Upstream up = new()
         {
             Push = new()
             {
                 Data = new()
                 {
-                    ConnectionId = connectionId,
+                    ConnectionId = ConnectionId,
                     Data = ByteString.CopyFrom(Formatters.FormatUpstream(post.ToByteArray()))
                 }
             }
@@ -99,7 +111,7 @@ public class CustomConnection
 
         if (ds != null)
         {
-            Logs.FileLogger.Verbose("Custom Service Response: {Response}", ds.ToString());
+            Logs.FileLogger.Verbose("{ServiceName} Service Response: {Response}", ServiceName, ds.ToString());
             return ds;
         }
         return default;

@@ -1,108 +1,12 @@
-﻿using Google.Protobuf;
-using Serilog;
-using Uplay.DownloadService;
+﻿using Uplay.DownloadService;
 
 namespace UplayKit.Connection;
 
-public class DownloadConnection
+public class DownloadConnection(DemuxSocket demuxSocket) : CustomConnection("download_service", demuxSocket)
 {
     #region Base
-    private uint connectionId;
-    private readonly DemuxSocket socket;
-    public bool IsConnectionClosed = false;
-    public bool InitDone = false;   //  These only exist if you need auth or something to can call other things.
-    public static readonly string ServiceName = "download_service";
+    public bool InitDone { get; private set; } = false;   //  These only exist if you need auth or something to can call other things.
     public string NetworkId = string.Empty;
-    private uint ReqId { get; set; } = 1;
-    public DownloadConnection(DemuxSocket demuxSocket)
-    {
-        socket = demuxSocket;
-
-        Connect();
-    }
-    /// <summary>
-    /// Reconnect the DownloadConnection
-    /// </summary>
-    public void Reconnect()
-    {
-        if (IsConnectionClosed)
-            Connect();
-    }
-    internal void Connect()
-    {
-        Uplay.Demux.Req openConnectionReq = new()
-        {
-            RequestId = socket.RequestId,
-            OpenConnectionReq = new()
-            {
-                ServiceName = ServiceName
-            }
-        };
-        socket.RequestId++;
-        var rsp = socket.SendReq(openConnectionReq);
-        if (rsp == null)
-        {
-            Console.WriteLine("Download Connection cancelled.");
-            Close();
-        }
-        else
-        {
-            connectionId = rsp.OpenConnectionRsp.ConnectionId;
-            if (rsp.OpenConnectionRsp.Success)
-            {
-                Console.WriteLine("Download Connection successful.");
-                socket.AddToObj(connectionId, this);
-                socket.AddToDict(connectionId, ServiceName);
-                IsConnectionClosed = false;
-            }
-        }
-    }
-    /// <summary>
-    /// Closing DownloadConnection
-    /// </summary>
-    public void Close()
-    {
-        if (socket.TerminateConnectionId == connectionId)
-        {
-            Console.WriteLine($"Connection terminated via Socket {ServiceName}");
-        }
-        socket.RemoveConnection(connectionId);
-        connectionId = uint.MaxValue;
-        IsConnectionClosed = true;
-    }
-    #endregion
-    #region Request
-    public Rsp? SendRequest(Req req)
-    {
-        if (IsConnectionClosed)
-            return null;
-        Logs.FileLogger.Verbose("Download Request: {req}", req.ToString());
-        Upstream post = new() { Request = req };
-        Uplay.Demux.Upstream up = new()
-        {
-            Push = new()
-            {
-                Data = new()
-                {
-                    ConnectionId = connectionId,
-                    Data = ByteString.CopyFrom(Formatters.FormatUpstream(post.ToByteArray()))
-                }
-            }
-        };
-
-        var down = socket.SendUpstream(up);
-        if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
-            return null;
-
-        var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-
-        if (ds != null || ds?.Response != null)
-        {
-            Logs.FileLogger.Verbose("Download Response: {rsp}", ds.ToString());
-            return ds.Response;
-        }
-        return null;
-    }
     #endregion
     #region Functions
     public bool InitDownloadToken(string ownershipToken)
@@ -117,11 +21,11 @@ public class DownloadConnection
             RequestId = ReqId
         };
         ReqId++;
-        var initializeRspDownload = SendRequest(initializeReqDownload);
+        var initializeRspDownload = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = initializeReqDownload });
         if (initializeRspDownload != null)
         {
             InitDone = true;
-            return initializeRspDownload.InitializeRsp.Ok;
+            return initializeRspDownload.Response.InitializeRsp.Ok;
         }
         else
         {
@@ -145,11 +49,11 @@ public class DownloadConnection
             RequestId = ReqId
         };
         ReqId++;
-        var initializeRspDownload = SendRequest(initializeReqDownload);
+        var initializeRspDownload = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = initializeReqDownload });
         if (initializeRspDownload != null)
         {
             InitDone = true;
-            return initializeRspDownload.InitializeRsp.Ok;
+            return initializeRspDownload.Response.InitializeRsp.Ok;
         }
         else
         {
@@ -168,7 +72,7 @@ public class DownloadConnection
     public List<string> GetUrl(string manifest, uint productId, string manifestType = "manifest")
     {
         if (!InitDone)
-            return new();
+            return [];
 
         Req urlReq = new()
         {
@@ -189,19 +93,19 @@ public class DownloadConnection
             }
         };
         ReqId++;
-        var urlRsp = SendRequest(urlReq);
+        var urlRsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = urlReq });
         if (urlRsp != null)
         {
-            if (UrlRsp.Types.Result.Success == urlRsp.UrlRsp.UrlResponses[0].Result && urlRsp.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
-                return urlRsp.UrlRsp.UrlResponses[0].DownloadUrls[0].Urls.ToList();
+            if (UrlRsp.Types.Result.Success == urlRsp.Response.UrlRsp.UrlResponses[0].Result && urlRsp.Response.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
+                return [.. urlRsp.Response.UrlRsp.UrlResponses[0].DownloadUrls[0].Urls];
         }
-        return new();
+        return [];
     }
 
     public List<UrlRsp.Types.DownloadUrls> GetUrlList(uint productId, List<string> ToRelPath)
     {
         if (!InitDone)
-            return new();
+            return [];
 
         Req urlReq = new()
         {
@@ -219,13 +123,13 @@ public class DownloadConnection
             }
         };
         ReqId++;
-        var downloadUrls = SendRequest(urlReq);
+        var downloadUrls = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = urlReq });
         if (downloadUrls != null)
         {
-            if (UrlRsp.Types.Result.Success == downloadUrls.UrlRsp.UrlResponses[0].Result && downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
-                return downloadUrls.UrlRsp.UrlResponses[0].DownloadUrls.ToList();
+            if (UrlRsp.Types.Result.Success == downloadUrls.Response.UrlRsp.UrlResponses[0].Result && downloadUrls.Response.UrlRsp.UrlResponses[0].DownloadUrls.Count > 0)
+                return [.. downloadUrls.Response.UrlRsp.UrlResponses[0].DownloadUrls];
         }
-        return new();
+        return [];
     }
     #endregion
 }

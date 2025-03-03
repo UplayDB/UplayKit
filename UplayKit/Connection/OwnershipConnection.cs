@@ -1,82 +1,27 @@
 ﻿using Google.Protobuf;
-using Serilog;
 using System.Text.Json;
 using Uplay.Ownership;
 
 namespace UplayKit.Connection;
 
-public class OwnershipConnection
+public class OwnershipConnection(DemuxSocket demuxSocket, string ticket, string sessionId) : CustomConnection("ownership_service", demuxSocket)
 {
     #region Base
-    private uint connectionId;
-    private readonly DemuxSocket socket;
-    public bool IsConnectionClosed = false;
-    public static readonly string ServiceName = "ownership_service";
     public event EventHandler<Push>? PushEvent;
-    public string Ticket;
-    public string SessionId;
-    private uint ReqId { get; set; } = 1;
-    public OwnershipConnection(DemuxSocket demuxSocket, string ticket, string sessionId)
+    public string Ticket => ticket;
+    public string SessionId => sessionId;
+    public override void OnConnected()
     {
-        socket = demuxSocket;
-        Ticket = ticket;
-        SessionId = sessionId;
-        Connect();
+        socket.NewMessage += Socket_NewMessage;
     }
 
-    public void Reconnect()
+    public override void OnDisconnected()
     {
-        if (IsConnectionClosed)
-            Connect();
-    }
-    internal void Connect()
-    {
-        var openConnectionReq = new Uplay.Demux.Req
-        {
-            RequestId = socket.RequestId,
-            OpenConnectionReq = new()
-            {
-                ServiceName = ServiceName
-            }
-        };
-        socket.RequestId++;
-        var rsp = socket.SendReq(openConnectionReq);
-        if (rsp == null)
-        {
-            Console.WriteLine("Ownership Connection cancelled.");
-            Close();
-        }
-        else
-        {
-            connectionId = rsp.OpenConnectionRsp.ConnectionId;
-            if (rsp.OpenConnectionRsp.Success)
-            {
-                Console.WriteLine("Ownership Connection successful");
-                socket.AddToObj(connectionId, this);
-                socket.AddToDict(connectionId, ServiceName);
-                socket.NewMessage += Socket_NewMessage;
-                IsConnectionClosed = false;
-            }
-        }
-    }
-
-    public void Close()
-    {
-        if (socket.TerminateConnectionId == connectionId)
-        {
-            Console.WriteLine($"Connection terminated via Socket {ServiceName}");
-        }
-        socket.RemoveConnection(connectionId);
-        connectionId = uint.MaxValue;
-        IsConnectionClosed = true;
         socket.NewMessage -= Socket_NewMessage;
     }
-
-    #endregion
-    #region Request/Message        
     private void Socket_NewMessage(object? sender, DemuxEventArgs e)
     {
-        if (e.Data.ConnectionId == connectionId)
+        if (e.Data.ConnectionId == ConnectionId)
         {
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
@@ -85,37 +30,6 @@ public class OwnershipConnection
                 PushEvent?.Invoke(this, down.Push);
             }
         }
-    }
-    public Rsp? SendRequest(Req req)
-    {
-        if (IsConnectionClosed)
-            return null;
-        Logs.FileLogger.Verbose("Ownership Request: {reqMessage}", req.ToString());
-        Upstream post = new() { Request = req };
-        Uplay.Demux.Upstream up = new()
-        {
-            Push = new()
-            {
-                Data = new()
-                {
-                    ConnectionId = connectionId,
-                    Data = ByteString.CopyFrom(Formatters.FormatUpstream(post.ToByteArray()))
-                }
-            }
-        };
-
-        var down = socket.SendUpstream(up);
-        if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
-            return null;
-
-        var ds = Formatters.FormatData<Downstream>(down.Push.Data.Data.ToByteArray());
-
-        if (ds != null || ds?.Response != null)
-        {
-            Logs.FileLogger.Verbose("Ownership Response: {rspMessage}", ds.ToString());
-            return ds.Response;
-        }            
-        return null;
     }
     #endregion
     #region Functions
@@ -134,10 +48,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.InitializeRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.InitializeRsp;
     }
 
     /// <summary>
@@ -148,26 +62,24 @@ public class OwnershipConnection
     public List<OwnedGame> GetOwnedGames(bool writeToFile = false)
     {
         var rsp = Initialize();
-        if (rsp != null)
+        if (rsp == null)
+            return [];
+        if (writeToFile)
         {
-            if (writeToFile)
-            {
-                File.WriteAllText("Ownership.json", JsonSerializer.Serialize(rsp, new JsonSerializerOptions() { WriteIndented = true }));
-                MemoryStream ms = new();
-                rsp.WriteTo(ms);
-                File.WriteAllBytes("Ownership", ms.ToArray());
-            }
-            //  This only exist here to ensure there is NO crash when someone doesnt own anything.
-            if (rsp.OwnedGames == null)
-                return new();
-            if (rsp.OwnedGames.OwnedGames_ == null)
-                return new();
-            return rsp.OwnedGames.OwnedGames_.ToList();
+            File.WriteAllText("Ownership.json", JsonSerializer.Serialize(rsp, new JsonSerializerOptions() { WriteIndented = true }));
+            using MemoryStream ms = new();
+            rsp.WriteTo(ms);
+            File.WriteAllBytes("Ownership", ms.ToArray());
         }
-        return new();
+        //  This only exist here to ensure there is NO crash when someone doesnt own anything.
+        if (rsp.OwnedGames == null)
+            return [];
+        if (rsp.OwnedGames.OwnedGames_ == null)
+            return [];
+        return [.. rsp.OwnedGames.OwnedGames_];
     }
 
-    public (string, ulong) GetOwnershipToken(uint productId)
+    public (string Token, ulong Expiration) GetOwnershipToken(uint productId)
     {
         Req req = new()
         {
@@ -180,12 +92,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null && rsp.OwnershipTokenRsp.Success)
-        {
-            return (rsp.OwnershipTokenRsp.Token, rsp.OwnershipTokenRsp.Expiration);
-        }
-        return (string.Empty, ulong.MinValue);
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return (string.Empty, ulong.MinValue);
+        return (rsp.Response.OwnershipTokenRsp.Token, rsp.Response.OwnershipTokenRsp.Expiration);
     }
 
     [Obsolete("Ubisoft no longer using this")]
@@ -202,10 +112,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.RegisterTemporaryOwnershipRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.RegisterTemporaryOwnershipRsp;
     }
 
     public ConsumeOwnershipRsp? ConsumeOwnership(uint productId, uint Quantity, string TransactionId, uint GameProductId, string Signature)
@@ -225,10 +135,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.ConsumeOwnershipRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.ConsumeOwnershipRsp;
     }
 
     public UnlockProductBranchRsp? UnlockProductBranch(uint productId, string password)
@@ -248,10 +158,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.UnlockProductBranchRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.UnlockProductBranchRsp;
     }
 
     public GetUplayPCTicketRsp? GetUplayPCTicket(uint productId, GetUplayPCTicketReq.Types.Platform platform = GetUplayPCTicketReq.Types.Platform.Normal)
@@ -268,10 +178,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.GetUplayPcTicketRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.GetUplayPcTicketRsp;
     }
 
     public ClaimKeystorageKeyRsp? ClaimKeystorageKeys(List<uint> productIds)
@@ -287,10 +197,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.ClaimKeystorageKeyRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.ClaimKeystorageKeyRsp;
     }
 
     public RegisterOwnershipRsp? RegisterOwnership(uint productId, string cdkey)
@@ -307,10 +217,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.RegisterOwnershipRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.RegisterOwnershipRsp;
     }
 
     public RegisterOwnershipRsp? RegisterOwnershipByCdKey(string cdkey)
@@ -326,10 +236,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.RegisterOwnershipRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.RegisterOwnershipRsp;
     }
 
     public DeprecatedGetProductFromCdKeyRsp? DeprecatedGetProductFromCdKey(string cdkey)
@@ -345,10 +255,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.DeprecatedGetProductFromCdKeyRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.DeprecatedGetProductFromCdKeyRsp;
     }
 
     public string GetProductConfig(uint productId)
@@ -365,10 +275,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null && rsp.GetProductConfigRsp.Result == GetProductConfigRsp.Types.Result.Success)
-            return rsp.GetProductConfigRsp.Configuration;
-        return string.Empty;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null || rsp.Response.GetProductConfigRsp.Result != GetProductConfigRsp.Types.Result.Success)
+            return string.Empty;
+        return rsp.Response.GetProductConfigRsp.Configuration;
     }
 
     public SwitchProductBranchRsp? SwitchProductBranch(uint productId, uint branchId, string? password)
@@ -390,10 +300,10 @@ public class OwnershipConnection
         if (password != null)
             req.SwitchProductBranchReq.SpecifiedBranch.Password = password;
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.SwitchProductBranchRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.SwitchProductBranchRsp;
     }
 
     public SwitchProductBranchRsp? SwitchBranchToDefault(uint productId)
@@ -412,10 +322,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.SwitchProductBranchRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.SwitchProductBranchRsp;
     }
 
 
@@ -432,10 +342,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.SignOwnershipRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.SignOwnershipRsp;
     }
 
 
@@ -454,10 +364,10 @@ public class OwnershipConnection
             UbiTicket = Ticket
         };
         ReqId += 1;
-        var rsp = SendRequest(req);
-        if (rsp != null)
-            return rsp.RegisterOwnershipRsp;
-        return null;
+        var rsp = SendPostRequest<Upstream, Downstream>(new Upstream() { Request = req });
+        if (rsp == null || rsp.Response == null)
+            return null;
+        return rsp.Response.RegisterOwnershipRsp;
     }
     #endregion
 }
