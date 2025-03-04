@@ -6,12 +6,18 @@ public static class DemuxSocketExt
 {
     public static void KeepAlivePush(this DemuxSocket socket)
     {
-        Push keepalive = new()
+        socket.SendPush(new()
         {
             KeepAlive = new()
-        };
+        });
+    }
 
-        socket.SendPush(keepalive);
+    public static void IncrementRequestId(this DemuxSocket socket)
+    {
+        lock (socket.Locker)
+        {
+            socket.RequestId++;
+        }
     }
 
     /// <summary>
@@ -20,8 +26,7 @@ public static class DemuxSocketExt
     /// <returns>True or False</returns>
     public static bool VersionCheck(this DemuxSocket socket)
     {
-        socket.RequestId++;
-        Req patchreq = new()
+        var patchrsp = socket.SendReq(new()
         {
             GetPatchInfoReq = new()
             {
@@ -30,8 +35,8 @@ public static class DemuxSocketExt
                 TrackType = 0
             },
             RequestId = socket.RequestId
-        };
-        var patchrsp = socket.SendReq(patchreq);
+        });
+        socket.RequestId++;
         if (patchrsp == null)
             return false;
         return DemuxSocket.ClientVersion == patchrsp.GetPatchInfoRsp.LatestVersion;
@@ -39,8 +44,7 @@ public static class DemuxSocketExt
 
     public static GetPatchInfoRsp? GetPatch(this DemuxSocket socket, string trackId = "DEFAULT", uint trackType = 0)
     {
-        socket.RequestId++;
-        Req patchreq = new()
+        var patchrsp = socket.SendReq(new()
         {
             GetPatchInfoReq = new()
             {
@@ -49,8 +53,8 @@ public static class DemuxSocketExt
                 TrackType = trackType
             },
             RequestId = socket.RequestId
-        };
-        var patchrsp = socket.SendReq(patchreq);
+        });
+        socket.RequestId++;
         if (patchrsp == null)
             return null;
         return patchrsp.GetPatchInfoRsp;
@@ -61,15 +65,13 @@ public static class DemuxSocketExt
     /// </summary>
     public static void PushVersion(this DemuxSocket socket)
     {
-        Push versionPush = new()
+        socket.SendPush(new()
         {
             ClientVersion = new()
             {
                 Version = DemuxSocket.ClientVersion
             }
-        };
-
-        socket.SendPush(versionPush);
+        });
     }
 
     /// <summary>
@@ -80,8 +82,7 @@ public static class DemuxSocketExt
     /// <returns>True or False</returns>
     public static bool Authenticate(this DemuxSocket socket, string token, bool KeepAlive = false)
     {
-        socket.RequestId++;
-        Req authReq = new()
+        var authRsp = socket.SendReq(new()
         {
             RequestId = socket.RequestId,
             AuthenticateReq = new()
@@ -93,8 +94,8 @@ public static class DemuxSocketExt
                     UbiTicket = token
                 }
             }
-        };
-        var authRsp = socket.SendReq(authReq);
+        });
+        socket.RequestId++;
         if (authRsp == null)
             return false;
         return authRsp.AuthenticateRsp.Success;

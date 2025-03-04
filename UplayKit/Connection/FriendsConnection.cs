@@ -27,7 +27,6 @@ public class FriendsConnection(DemuxSocket demuxSocket) : CustomConnection("frie
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
             {
-                Logs.FileLogger.Verbose("Friends Service Push: {push}", down.Push.ToString());
                 PushEvent?.Invoke(this, down.Push);
             }
         }

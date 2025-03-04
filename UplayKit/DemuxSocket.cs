@@ -7,6 +7,7 @@ using System.Security.Authentication;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Buffers;
+using Serilog;
 
 namespace UplayKit;
 
@@ -21,8 +22,8 @@ public class DemuxSocket : SslClient
     #region Fields
     public event EventHandler<DemuxEventArgs>? NewMessage;
     public uint RequestId { get; internal set; }
-    public static string ConnectionHost { get; internal set; } = "dmx.upc.ubisoft.com";
-    public static int ConnectionPort { get; internal set; } = 443;
+    public static string ConnectionHost { get; set; } = "dmx.upc.ubisoft.com";
+    public static int ConnectionPort { get; set; } = 443;
     public int WaitInTimeMS = 10;
     public const uint ClientVersion = 11646;
     public bool TestConfig { get; set; } = false;
@@ -42,7 +43,7 @@ public class DemuxSocket : SslClient
     private bool IsWaitingForMore;
     private bool IsBufferReady;
     private uint WaitingLen;
-    private readonly object Locker = new();
+    internal readonly object Locker = new();
     #endregion
     #region Basic
 
@@ -62,21 +63,20 @@ public class DemuxSocket : SslClient
         this.OptionSendBufferSize = 8192 * 4;
         this.OptionReceiveBufferLimit = 8192 * 4;
         this.OptionReceiveBufferSize = 8192 * 4;
-        if (Logs.File_Log_Switch.MinimumLevel <= Serilog.Events.LogEventLevel.Debug)
+        if (Log.IsEnabled(Serilog.Events.LogEventLevel.Debug))
         {
-            Logs.File_Log_Switch.MinimumLevel = Serilog.Events.LogEventLevel.Verbose;
             Context.CertificateValidationCallback = (object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) => true;
         }
         NewMessage += DemuxSocket_NewMessage;
         Connect();
         ReceiveAsync();
-        Logs.MixedLogger.Information("DemuxSocket Connected? {IsConnected}", this.IsConnected);
+        Log.Information("DemuxSocket Connected? {IsConnected}", this.IsConnected);
     }
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
-        Logs.FileLogger.Verbose("OnReceived!");
-        Logs.FileLogger.Verbose($"STATS: Bytes Sent: {BytesSent} | Bytes sending: {BytesSending} | Bytes Pending {BytesPending} | Bytes Recieved {BytesReceived}");
-        Logs.FileLogger.Verbose($"Buffer L: {buffer.Length} | Offset : {offset} | Size: {size}");
+        Log.Verbose("OnReceived!");
+        Log.Verbose($"STATS: Bytes Sent: {BytesSent} | Bytes sending: {BytesSending} | Bytes Pending {BytesPending} | Bytes Recieved {BytesReceived}");
+        Log.Verbose($"Buffer L: {buffer.Length} | Offset : {offset} | Size: {size}");
 
         ArraySegment<byte> buff = buffer.Take((int)size).ToArray();
 
@@ -94,13 +94,13 @@ public class DemuxSocket : SslClient
             {
                 NonUserRequest(Formatters.FormatData<Downstream>(buff));
 
-                Logs.FileLogger.Verbose("Remaining buffer count: " + buff.Count);
+                Log.Verbose("Remaining buffer count: " + buff.Count);
                 File.WriteAllBytes("Error_Remaining_Buff", [.. buff]);
                 File.WriteAllBytes("Error_Remaining_Bytes", buffer);
             }
             else
             {
-                Logs.FileLogger.Verbose($"Unknown byte! {buff[0]}");
+                Log.Verbose($"Unknown byte! {buff[0]}");
                 //Debug.PWDebug($"Unknown byte! {_InternalReaded[0]}   ", "ERROR");
                 File.WriteAllBytes("Error_Received_Buff", [.. buff]);
                 File.WriteAllBytes("Error_Received_Bytes", buffer);
@@ -110,7 +110,7 @@ public class DemuxSocket : SslClient
         if (!IsWaitingForMore)
         {
             var length_to_read = Formatters.FormatLength(BitConverter.ToUInt32(buff.Slice(0, 4)));
-            Logs.FileLogger.Verbose($"Should Read Length of {length_to_read}");
+            Log.Verbose($"Should Read Length of {length_to_read}");
             Buffer = buff.Slice(4);
             if (Buffer.Count == length_to_read)
             {
@@ -121,7 +121,7 @@ public class DemuxSocket : SslClient
             }
             IsWaitingForMore = true;
             WaitingLen = length_to_read - (uint)Buffer.Count;
-            Logs.FileLogger.Verbose($"More to read! {WaitingLen}");
+            Log.Verbose($"More to read! {WaitingLen}");
             ReceiveAsync();
             return;
         }
@@ -137,16 +137,16 @@ public class DemuxSocket : SslClient
         }
         else
         {
-            Logs.FileLogger.Verbose($"Waiting Len: {WaitingLen}");
+            Log.Verbose($"Waiting Len: {WaitingLen}");
             var remain_buff = buff.Take((int)WaitingLen).ToArray();
             Buffer = Buffer.ToArray().Concat(remain_buff).ToArray();
             var lasted = buff.Skip((int)WaitingLen).ToArray();
             WaitingLen -= (uint)remain_buff.Length;
-            Logs.FileLogger.Verbose($"Waiting to read: {WaitingLen}");
+            Log.Verbose($"Waiting to read: {WaitingLen}");
             if (lasted.Length > 0)
             {
                 File.WriteAllBytes($"RemainingBytes_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}", lasted);
-                Logs.FileLogger.Verbose("REMAININGBYTES: " + lasted.Length);
+                Log.Verbose("REMAININGBYTES: " + lasted.Length);
             }
 
             ReceiveAsync();
@@ -171,18 +171,18 @@ public class DemuxSocket : SslClient
 
     protected override void OnError(SocketError error)
     {
-        Logs.MixedLogger.Error("ERROR: " + error);
+        Log.Error("ERROR: " + error);
     }
 
     protected override void OnDisconnecting()
     {
-        Logs.MixedLogger.Information("DISCONNECTING!");
+        Log.Information("DISCONNECTING!");
     }
     #endregion
     #region Event
     private void DemuxSocket_NewMessage(object? sender, DemuxEventArgs e)
     {
-        Logs.FileLogger.Verbose("New Message! {Data}",e.Data.ToString());
+        Log.Verbose("New Message! {Data}",e.Data.ToString());
     }
     #endregion
     #region Connection Handling
@@ -194,7 +194,7 @@ public class DemuxSocket : SslClient
     public void AddToDict(uint connectionID, string ConnectionName)
     {
         ConnectionDict.Add(connectionID, ConnectionName);
-        Logs.MixedLogger.Verbose("Connection added {ConnectionName} as ID {ConnectionId}", ConnectionName, connectionID);
+        Log.Verbose("Connection added {ConnectionName} as ID {ConnectionId}", ConnectionName, connectionID);
     }
 
     /// <summary>
@@ -205,7 +205,7 @@ public class DemuxSocket : SslClient
     public void AddToObj(uint connectionID, object ConnectionObj)
     {
         ConnectionObject.Add(connectionID, ConnectionObj);
-        Logs.MixedLogger.Verbose("Connection added {ConnectionObj} as ID {ConnectionId}", ConnectionObj, connectionID);
+        Log.Verbose("Connection added {ConnectionObj} as ID {ConnectionId}", ConnectionObj, connectionID);
     }
 
     /// <summary>
@@ -226,7 +226,7 @@ public class DemuxSocket : SslClient
     public void TerminateConnection(uint connectionID, ConnectionClosedPush.Types.Connection_ErrorCode errorCode = ConnectionClosedPush.Types.Connection_ErrorCode.ConnectionForceQuit)
     {
         TerminateConnectionId = connectionID;
-        Logs.MixedLogger.Information("Connection Terminated ID: {connectionID}, Reason: {errorCode}", connectionID, errorCode);
+        Log.Information("Connection Terminated ID: {connectionID}, Reason: {errorCode}", connectionID, errorCode);
         if (connectionID == 0)
         {
             Disconnect();
@@ -245,13 +245,13 @@ public class DemuxSocket : SslClient
     /// <exception cref="Exception">If the Response Length from Response is 0</exception>
     public Rsp? SendReq(Req req)
     {
-        Logs.FileLogger.Verbose("Request: {Req}",req.ToString());
+        Log.Verbose("Request: {Req}",req.ToString());
         Upstream post = new() { Request = req };
-        Logs.MixedLogger.Verbose("Sending Request!");
+        Log.Verbose("Sending Request!");
         var downstream = SendUpstream(post);
         if (downstream != null && downstream.Response != null && !CheckTheConnection(downstream))
         {
-            Logs.FileLogger.Verbose("Response: {Rsp}", downstream.Response.ToString());
+            Log.Verbose("Response: {Rsp}", downstream.Response.ToString());
             return downstream.Response;
         }
         return null;
@@ -265,16 +265,16 @@ public class DemuxSocket : SslClient
     /// <exception cref="Exception">If the Response Length from Response is 0</exception>
     public Downstream? SendUpstream(Upstream up)
     {
-        Logs.FileLogger.Verbose("Upstream: {up}", up.ToString());
+        Log.Verbose("Upstream: {up}", up.ToString());
         var upbytes = Formatters.FormatUpstream(up.ToByteArray());
-        Logs.MixedLogger.Verbose("Sending Upstream!");
+        Log.Verbose("Sending Upstream!");
         var response = SendBytes(upbytes);
         if (response != null)
         {
             var downstream = Formatters.FormatDataNoLength<Downstream>(response);
             if (downstream != null && !CheckTheConnection(downstream))
             {
-                Logs.FileLogger.Verbose("Downstream: {down}",downstream.ToString());
+                Log.Verbose("Downstream: {down}",downstream.ToString());
                 return downstream;
             }
         }
@@ -291,10 +291,10 @@ public class DemuxSocket : SslClient
         lock (Locker)
         {
             IsUserRequest = true;
-            Logs.MixedLogger.Verbose("Sending Bytes!");
+            Log.Verbose("Sending Bytes!");
             if (Send(bytes) == bytes.Length)
             {
-                Logs.MixedLogger.Verbose("Sent success!");
+                Log.Verbose("Sent success!");
                 while (!IsBufferReady)
                 {
                     Thread.Sleep(WaitInTimeMS);
@@ -305,7 +305,7 @@ public class DemuxSocket : SslClient
                 Buffer = ArraySegment<byte>.Empty;
                 return returner;
             }
-            Logs.MixedLogger.Verbose("We could not sent the bytes!");
+            Log.Verbose("We could not sent the bytes!");
             IsUserRequest = false;
             return null;
         }
@@ -322,7 +322,7 @@ public class DemuxSocket : SslClient
         {
             Upstream up = new() { Push = push };
             Send(Formatters.FormatUpstream(up.ToByteArray()));
-            Logs.MixedLogger.Verbose("Write was successful!");
+            Log.Verbose("Write was successful!");
         }
     }
 
@@ -334,13 +334,13 @@ public class DemuxSocket : SslClient
             return false;
         if (downstream.Push.ClientOutdated != null)
         {
-            Logs.MixedLogger.Verbose("Your Client is Outdated!");
+            Log.Verbose("Your Client is Outdated!");
             TerminateConnection(0);
             return true;
         }
         if (downstream.Push.ConnectionClosed != null && downstream.Push.ConnectionClosed.HasConnectionId)
         {
-            Logs.MixedLogger.Verbose("Connection closed");
+            Log.Verbose("Connection closed");
             TerminateConnection(downstream.Push.ConnectionClosed.ConnectionId, downstream.Push.ConnectionClosed.ErrorCode);
             return true;
         }

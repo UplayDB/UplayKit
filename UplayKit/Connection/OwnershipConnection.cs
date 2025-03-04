@@ -26,7 +26,6 @@ public class OwnershipConnection(DemuxSocket demuxSocket, string ticket, string 
             var down = Formatters.FormatData<Downstream>(e.Data.Data.ToArray());
             if (down != null && down.Push != null)
             {
-                Logs.FileLogger.Information("Ownership push: {pushMessage}", down.Push.ToString());
                 PushEvent?.Invoke(this, down.Push);
             }
         }

@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Serilog;
 
 namespace UplayKit.Connection;
 
@@ -8,7 +9,7 @@ public class CustomConnection
     public uint ConnectionId { get; protected set; }
     public readonly DemuxSocket socket;
     public bool IsConnectionClosed { get; protected set; } = false;
-    public string ServiceName = "";
+    public string ServiceName = string.Empty;
     public uint ReqId { get; set; } = 1;
     public CustomConnection(string serviceName, DemuxSocket demuxSocket)
     {
@@ -40,7 +41,7 @@ public class CustomConnection
         var rsp = socket.SendReq(openConnectionReq);
         if (rsp == null)
         {
-            Console.WriteLine("ServiceName Connection cancelled.");
+            Log.Information("{ServiceName} Connection cancelled.", ServiceName);
             Close();
         }
         else
@@ -48,7 +49,7 @@ public class CustomConnection
             ConnectionId = rsp.OpenConnectionRsp.ConnectionId;
             if (rsp.OpenConnectionRsp.Success)
             {
-                Console.WriteLine("ServiceName Connection successful.");
+                Log.Information("{ServiceName} Connection successful.", ServiceName);
                 socket.AddToObj(ConnectionId, this);
                 socket.AddToDict(ConnectionId, ServiceName);
                 IsConnectionClosed = false;
@@ -64,7 +65,7 @@ public class CustomConnection
     {
         if (socket.TerminateConnectionId == ConnectionId)
         {
-            Console.WriteLine($"Connection terminated via Socket {ServiceName}");
+            Log.Information("Connection terminated via Socket {ServiceName} {Id}", ServiceName, ConnectionId);
         }
         socket.RemoveConnection(ConnectionId);
         ConnectionId = uint.MaxValue;
@@ -90,7 +91,7 @@ public class CustomConnection
         if (IsConnectionClosed)
             return default;
 
-        Logs.FileLogger.Verbose("{ServiceName} Post: {post}", ServiceName, post.ToString());
+        Log.Verbose("{ServiceName} Post: {post}", ServiceName, post.ToString());
         Uplay.Demux.Upstream up = new()
         {
             Push = new()
@@ -103,18 +104,16 @@ public class CustomConnection
             }
         };
 
-        var down = socket.SendUpstream(up);
+        Uplay.Demux.Downstream? down = socket.SendUpstream(up);
         if (IsConnectionClosed || down == null || !down.Push.Data.HasData)
             return default;
 
-        var ds = Formatters.FormatData<V>(down.Push.Data.Data.ToByteArray());
+        V? ds = Formatters.FormatData<V>(down.Push.Data.Data.ToByteArray());
 
-        if (ds != null)
-        {
-            Logs.FileLogger.Verbose("{ServiceName} Service Response: {Response}", ServiceName, ds.ToString());
-            return ds;
-        }
-        return default;
+        if (ds == null)
+            return default;
+        Log.Verbose("{ServiceName} Service Response: {Response}", ServiceName, ds.ToString());
+        return ds;
     }
     #endregion
 }
