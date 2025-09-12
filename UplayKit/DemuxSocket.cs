@@ -4,8 +4,6 @@ using Uplay.Demux;
 using NetCoreServer;
 using System.Net;
 using System.Security.Authentication;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Buffers;
 using Serilog;
 
@@ -25,7 +23,7 @@ public class DemuxSocket : SslClient
     public static string ConnectionHost { get; set; } = "dmx.upc.ubisoft.com";
     public static int ConnectionPort { get; set; } = 443;
     public int WaitInTimeMS = 10;
-    public const uint ClientVersion = 11646;
+    public const uint ClientVersion = 12922;
     public bool TestConfig { get; set; } = false;
     public uint TerminateConnectionId { get; internal set; } = 0;
     /// <summary>
@@ -59,18 +57,18 @@ public class DemuxSocket : SslClient
     public void Start()
     {
         // These made for Getting our receive size bigget
-        this.OptionSendBufferLimit = 8192 * 4;
-        this.OptionSendBufferSize = 8192 * 4;
-        this.OptionReceiveBufferLimit = 8192 * 4;
-        this.OptionReceiveBufferSize = 8192 * 4;
+        OptionSendBufferLimit = 8192 * 4;
+        OptionSendBufferSize = 8192 * 4;
+        OptionReceiveBufferLimit = 8192 * 4;
+        OptionReceiveBufferSize = 8192 * 4;
         if (Log.IsEnabled(Serilog.Events.LogEventLevel.Debug))
         {
-            Context.CertificateValidationCallback = (object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) => true;
+            Context.CertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
         }
         NewMessage += DemuxSocket_NewMessage;
         Connect();
         ReceiveAsync();
-        Log.Information("DemuxSocket Connected? {IsConnected}", this.IsConnected);
+        Log.Information("DemuxSocket Connected? {IsConnected}", IsConnected);
     }
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
@@ -176,7 +174,7 @@ public class DemuxSocket : SslClient
 
     protected override void OnDisconnecting()
     {
-        Log.Information("DISCONNECTING!");
+        Log.Information("Disconnecting!");
     }
     #endregion
     #region Event

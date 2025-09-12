@@ -7,7 +7,7 @@ public class DenuvoConnection(DemuxSocket demuxSocket) : CustomConnection("denuv
 {
     public (GetGameTokenRsp response, Rsp.Types.Result result)? GetGameToken(string ownership_token, ByteString requestToken)
     {
-        Downstream? downstream = SendPostRequest<Upstream, Downstream>(new Upstream()
+        Downstream? downstream = SendPostRequest<Upstream, Downstream>(new()
         { 
             Request = new()
             { 
@@ -27,7 +27,7 @@ public class DenuvoConnection(DemuxSocket demuxSocket) : CustomConnection("denuv
 
     public (GetGameTimeTokenRsp response, Rsp.Types.Result result)? GetTimeToken(string ownership_token, ByteString requestToken)
     {
-        Downstream? downstream = SendPostRequest<Upstream, Downstream>(new Upstream()
+        Downstream? downstream = SendPostRequest<Upstream, Downstream>(new()
         {
             Request = new()
             {
@@ -43,5 +43,29 @@ public class DenuvoConnection(DemuxSocket demuxSocket) : CustomConnection("denuv
         if (downstream == null || downstream.Response == null)
             return null;
         return (downstream.Response.GetGameTimeTokenRsp, downstream.Response.Result);
+    }
+
+    public (GetOwnershipListTokenRsp response, Rsp.Types.Result result)? GetOwnershipListToken(uint productId, ByteString gameToken, List<uint> addons)
+    {
+        Downstream? downstream = SendPostRequest<Upstream, Downstream>(new()
+        {
+            Request = new()
+            {
+                RequestId = ReqId,
+                GetOwnershipListTokenReq = new()
+                {
+                    ProductId = productId,
+                    GameToken = gameToken,
+                    AddonsToValidate = 
+                    {
+                        addons
+                    }
+                }
+            }
+        });
+        ReqId++;
+        if (downstream == null || downstream.Response == null)
+            return null;
+        return (downstream.Response.GetOwnershipListTokenRsp, downstream.Response.Result);
     }
 }

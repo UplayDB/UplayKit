@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Serilog;
 using System.Reflection.Metadata;
 
 namespace UplayKit;
@@ -65,7 +66,7 @@ public static class Formatters
         }
         catch (Exception ex)
         {
-            InternalEx.WriteEx(ex);
+            Log.Error("FormatData produced error: {Error}", ex);
             return default;
         }
     }
@@ -88,7 +89,7 @@ public static class Formatters
         }
         catch (Exception ex)
         {
-            InternalEx.WriteEx(ex);
+            Log.Error("FormatDataNoLength produced error: {Error}", ex);
             return default;
         }
     }

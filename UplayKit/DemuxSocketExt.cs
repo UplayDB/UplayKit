@@ -26,20 +26,10 @@ public static class DemuxSocketExt
     /// <returns>True or False</returns>
     public static bool VersionCheck(this DemuxSocket socket)
     {
-        var patchrsp = socket.SendReq(new()
-        {
-            GetPatchInfoReq = new()
-            {
-                PatchTrackId = "DEFAULT",
-                TestConfig = socket.TestConfig,
-                TrackType = 0
-            },
-            RequestId = socket.RequestId
-        });
-        socket.RequestId++;
+        var patchrsp = socket.GetPatch();
         if (patchrsp == null)
             return false;
-        return DemuxSocket.ClientVersion == patchrsp.GetPatchInfoRsp.LatestVersion;
+        return DemuxSocket.ClientVersion == patchrsp.LatestVersion;
     }
 
     public static GetPatchInfoRsp? GetPatch(this DemuxSocket socket, string trackId = "DEFAULT", uint trackType = 0)
